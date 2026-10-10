@@ -180,5 +180,104 @@ class TeleportTests(unittest.TestCase):
                     teleport(0, 0, correction)
 
 
+class CalibrationTests(unittest.TestCase):
+    def tearDown(self):
+        import teleport as module
+        module._trials.clear()
+
+    def test_same_trial_recovery_all_states_and_branches(self):
+        from teleport import prepare_calibration, finish_calibration, cancel_calibration
+        for state in ("0", "+", "+i"):
+            found = set()
+            for seed in range(32):
+                trial = prepare_calibration(state, "CX_H", seed=seed)
+                bits = tuple(trial["alice_bits"])
+                found.add(bits)
+                self.assertNotIn("fidelity", trial)
+                self.assertNotIn("bob_probabilities", trial)
+                result = finish_calibration(trial["trial_id"], required_correction(bits))
+                self.assertEqual(result["alice_bits"], list(bits))
+                self.assertAlmostEqual(result["fidelity"], 1, places=12)
+                self.assertEqual(json.loads(json.dumps(result, allow_nan=False)), result)
+                cancel_calibration(trial["trial_id"])
+                if len(found) == 4:
+                    break
+            self.assertEqual(len(found), 4)
+
+    def test_incorrect_operation_and_pauli_have_physical_consequences(self):
+        from teleport import prepare_calibration, finish_calibration, cancel_calibration
+        for operation in ("H_CX", "CX_ONLY"):
+            failures = []
+            for state in ("0", "+", "+i"):
+                trial = prepare_calibration(state, operation, seed=5)
+                result = finish_calibration(trial["trial_id"], required_correction(trial["alice_bits"]))
+                failures.append(result["fidelity"])
+                cancel_calibration(trial["trial_id"])
+            self.assertLess(min(failures), 0.9)
+        trial = prepare_calibration("+", "CX_H", seed=4)
+        correct = required_correction(trial["alice_bits"])
+        wrong = {"I": "Z", "Z": "I", "X": "XZ", "XZ": "X"}[correct]
+        self.assertAlmostEqual(finish_calibration(trial["trial_id"], wrong)["fidelity"], 0, places=12)
+
+    def test_handle_retry_commit_cancel_expiry_and_bound(self):
+        import teleport as module
+        from unittest.mock import patch
+        trial = module.prepare_calibration("0", "CX_H", seed=3)
+        result = module.finish_calibration(trial["trial_id"], "I")
+        result["alice_bits"][0] = 9
+        self.assertNotEqual(module.finish_calibration(trial["trial_id"], "I")["alice_bits"][0], 9)
+        with self.assertRaisesRegex(ValueError, "committed"):
+            module.finish_calibration(trial["trial_id"], "X")
+        self.assertTrue(module.cancel_calibration(trial["trial_id"])["cancelled"])
+        self.assertFalse(module.cancel_calibration(trial["trial_id"])["cancelled"])
+        with self.assertRaises(ValueError):
+            module.finish_calibration(trial["trial_id"], "I")
+        trial = module.prepare_calibration("0", "CX_H")
+        with patch("teleport.monotonic", return_value=module._trials[trial["trial_id"]]["created"] + 1801):
+            with self.assertRaisesRegex(ValueError, "expired"):
+                module.finish_calibration(trial["trial_id"], "I")
+        with patch("teleport._MAX_TRIALS", 1):
+            module.prepare_calibration("0", "CX_H")
+            with self.assertRaisesRegex(ValueError, "Too many"):
+                module.prepare_calibration("0", "CX_H")
+
+    def test_selected_simulator_and_bit_wiring(self):
+        from teleport import calibration_circuit, prepare_calibration, finish_calibration
+        from qiskit.providers.basic_provider import BasicSimulator
+        from unittest.mock import patch, Mock
+        circuit = calibration_circuit("+i", "CX_H")
+        wiring = [(circuit.find_bit(i.qubits[0]).index, circuit.find_bit(i.clbits[0]).index)
+                  for i in circuit.data if i.operation.name == "measure"]
+        self.assertEqual(wiring, [(0, 0), (1, 1)])
+        backend = BasicSimulator(seed_simulator=4)
+        with patch.object(backend, "run", wraps=backend.run) as run:
+            trial = prepare_calibration("+i", "CX_H", backend=backend)
+            self.assertEqual(run.call_count, 1)
+            self.assertEqual(run.call_args.kwargs, {"shots": 1})
+            result = finish_calibration(trial["trial_id"], required_correction(trial["alice_bits"]))
+            self.assertAlmostEqual(result["fidelity"], 1, places=12)
+            self.assertEqual(run.call_count, 1)
+        hardware = Mock()
+        hardware.configuration.return_value.simulator = False
+        with self.assertRaisesRegex(ValueError, "unsupported"):
+            prepare_calibration("0", "CX_H", backend=hardware)
+        hardware.run.assert_not_called()
+        with patch.object(backend, "run", side_effect=RuntimeError("backend broken")):
+            with self.assertRaisesRegex(RuntimeError, "backend broken"):
+                prepare_calibration("0", "CX_H", backend=backend)
+        with patch.object(backend, "run") as run:
+            run.return_value.result.return_value.get_counts.return_value = {"01": 1}
+            trial = prepare_calibration("0", "CX_H", backend=backend)
+            self.assertEqual(trial["alice_bits"], [1, 0])
+
+    def test_invalid_inputs_never_create_handles(self):
+        from teleport import prepare_calibration, finish_calibration
+        for state, operation in ((None, "CX_H"), ("1", "CX_H"), ("0", "bad")):
+            with self.assertRaises(ValueError):
+                prepare_calibration(state, operation)
+        with self.assertRaises(ValueError):
+            finish_calibration("missing", "I")
+
+
 if __name__ == "__main__":
     unittest.main()

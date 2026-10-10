@@ -1,7 +1,8 @@
 # Split Vault
 
 A two-player asymmetric quantum escape-room game. The quantum core uses
-real Qiskit circuits for Stage 1 Bell experiments and Stage 2 teleportation.
+real Qiskit circuits for Bell Lock, Teleportation Calibration, Warden and
+small QFT utilities. The playable progression stops after Warden.
 Bell Lock uses the simulator or QPU selected in Qollab. Python callers can
 also run ideal statevector experiments locally, without a separate Aer installation.
 
@@ -132,13 +133,16 @@ print(json.dumps(teleport_experiment(1.1, 0.7, "Z", 16)))
   each trial's bits/Bob state/fidelity, and `mean_fidelity`. Each shot runs an
   independent trial with the same caller-selected correction. Mean fidelity
   is the mean of the trial fidelities, not fidelity of an averaged state.
-- `warden_experiment(config, shots)` and `period_experiment(config, shots)`
-  are reserved interfaces. Their quantum modules are currently empty, so they
-  return `status: "not_implemented"` and an `error` dictionary with `code` and
-  `message`, rather than measurements. Config must be a JSON-compatible
-  dictionary; configuration fields will be defined alongside the mechanics.
+- `warden_experiment(config, shots, *, backend=None, seed=None)` now measures
+  an ideal or intercepted link, with Alice-first counts and per-matched-basis
+  QBER. Gameplay uses an opaque link from `warden_open()`; diagnostic callers
+  may supply attack="ideal" or "z". `period_experiment(config, shots)` remains
+  an explicitly unavailable reserved interface; N=15 period finding is deferred.
+- `teleport_prepare`, `teleport_finish`, `teleport_cancel` provide the staged
+  calibration protocol. `qft_experiment` exposes small Fourier utilities.
+  See the current API contracts and verification evidence in `VERIFY.md`.
 
-Implemented experiments return `status: "ok"`. All functions require a
+Implemented experiments return `status: "ok"`. Sampling functions require a
 positive integer shot count; invalid arguments raise `ValueError`.
 
 ## Minimal game engine
@@ -178,7 +182,7 @@ Run the lightweight JavaScript tests with Node's built-in test runner (no
 dependencies or installation step required):
 
 ```sh
-node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs
+node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs test_calibration.mjs test_security.mjs
 # Or, with npm available: npm test
 ```
 
@@ -251,10 +255,11 @@ Verification commands:
 
 ```sh
 python -m unittest discover -v
-node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs
+node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs test_calibration.mjs test_security.mjs
 ```
 
-All 39 Python tests and 31 JavaScript unit tests pass. Python tests run real
+The original foundation had 39 Python and 31 JavaScript unit tests. Current
+expanded results and commands are recorded in `VERIFY.md`. Python tests run real
 Qiskit circuits on a supplied backend for every gate and basis combination,
 and verify count ordering and error propagation. Adapter tests verify the
 async calling convention, backend forwarding, dictionary conversion, proxy
@@ -265,16 +270,75 @@ JavaScript over a test-only stdio adapter, then feeds results into the game:
 
 ```sh
 npm run test:integration
-# Or: node --test test_qollab_integration.mjs
+# Or: node --test test_qollab_integration.mjs test_later_integration.mjs
 ```
 
 It requires Python with `requirements.txt` installed. It uses the project
 virtual environment if present; `SPLIT_VAULT_PYTHON` can select another Python
-executable. This test covers all 16 gate/basis combinations and an invalid gate
-without starting an HTTP server. It substitutes only for Qollab's call boundary;
+executable. The suites cover all 16 Bell gate/basis combinations, staged
+calibration, hidden Warden links, QFT spectra and invalid requests without
+starting an HTTP server. They substitute only for Qollab's call boundary;
 it is not a hosted Qollab deployment test. Live Qollab execution still needs
 verification in the platform.
 
 The existing responsive previews are `level-1-desktop.png` and
 `level-1-mobile.png`. All project files remain flat in the root, below the
 90-file limit.
+
+
+## Teleportation Calibration and Warden
+
+After Bell Lock, use Continue to Teleportation Calibration. Choose an ideal
+local simulator in Qollab. Alice chooses a known |0>, |+> or |+i> state and an
+actual Bell-measurement operation, then commits and measures. Her two readout
+bits are transmitted for two classical bits. Bob chooses and commits I/X/Z/XZ
+before fidelity is revealed. The notebook starts without a correction table.
+A single state can hide an incorrect Pauli; completion requires successful
+recovery on all four branches with all three complementary states.
+
+One valid completed calibration experiment costs one source credit, including
+wrong recovery. Its selected simulator really runs the measurement circuit;
+Python retains the same conditional state for Bob's later correction. Fidelity
+is an ideal-circuit diagnostic, not tomography. Hardware, noisy and unknown
+backends are rejected for calibration. Handles expire after 30 minutes;
+reset cancels the trial and preserves notebook discoveries and earned rewards.
+Each new lab has an explicit 12-credit/24-bit allocation. Random branch repeats
+may require checkpoint resets; verified calibration discoveries survive.
+
+Warden follows calibration. Open a hidden link; Alice chooses an X/Z test
+basis and sacrifices 1–4 sampling credits, while Bob independently commits his
+basis. Each credit purchases 1,024 fresh-pair shots, not repeated measurements
+of one physical pair. Both send their one-bit basis code (Z=0, X=1) before Bob
+sees the statistics. He commits trust/reject/insufficient evidence before the
+explanation. ZZ alone does not certify a link; a Z interceptor can preserve ZZ
+while damaging XX. Mismatched data has no QBER. The educational acceptance
+rule requires both matched bases; these thresholds are not a general security
+proof for noisy hardware. Repeated trials require a local simulator (IonQ
+allows one job per Run). Actual hardware has not been tested.
+
+The security checkpoint restores the same hidden link's budget and preserves
+notes/rewards. Replace an expired link explicitly to start a new drill without
+reusing old sample evidence. A fragment is awarded at most once per level.
+Actual browser/Qollab behavior remains on the HUMAN_CHECK list.
+
+## Small QFT utilities (no new gameplay)
+
+Python callers can run `qft_experiment({"num_qubits": 4, "period": 4}, 4096)`
+from `api`. r=4 gives measured peaks at 0,4,8,12; r=2 gives 0,8. Registers are
+bounded to 1–6 qubits; periods divide the register size. The forward convention
+is exp(+2*pi*i*x*y/M)/sqrt(M), inverse is negative, q0 is least significant,
+and counts display q[n-1]...q[0]. Fourier gates and state preparation are real
+Qiskit; derived dominant positions come from sampled counts.
+
+Future Qollab utility callers use a static named import:
+
+```javascript
+import { qft_experiment } from "api";
+import { createQftExperiment } from "./quantum-client.js";
+const runQft = createQftExperiment(qft_experiment, backend);
+const spectrum = await runQft({ config: { num_qubits: 4, period: 2 }, shots: 4096 });
+```
+
+This is an API utility, not a new Quantum Radio level or N=15 factoring claim.
+Circuit Architect, period finding, Final Vault and networking remain deferred.
+Read AGENTS.md, WORKFLOW.md, TASKS.md and VERIFY.md for the reviewed boundary.

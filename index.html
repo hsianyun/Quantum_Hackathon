@@ -22,6 +22,7 @@
     <div class="resource fragments-resource"><span>Vault fragments</span><strong id="fragments">00</strong><span class="fragment-icon" aria-hidden="true">&#9671;</span></div>
   </section>
   <main>
+    <div id="bell-level">
     <section class="mission-heading" aria-labelledby="mission-title">
       <div><p class="eyebrow"><span id="act-level">ACT 01 / LEVEL 01</span><span class="small-divider"></span> ENTANGLEMENT</p>
         <h1 id="mission-title">Bell Lock<span>.</span></h1>
@@ -100,10 +101,13 @@
       <p class="field-hint">Histogram labels show Alice's bit first, then Bob's.</p>
     </section>
     <p id="completion-banner" class="completion-banner" role="status" hidden>Fragment 01 secured. Bell Lock complete. You can keep experimenting; this level awards one fragment.</p>
+    <button type="button" id="next-level" class="small-button" disabled>Continue to Teleportation Calibration</button>
     <section class="why-panel" aria-label="Level explanation">
       <button type="button" id="why-toggle" class="why-toggle" aria-controls="why-content" aria-expanded="false" disabled>Why this works <span id="why-status">Locked / solve Bell Lock to unlock</span></button>
       <div id="why-content" hidden></div>
     </section>
+    </div>
+    <section id="later-level" aria-label="Current quantum level" hidden></section>
     <section class="channel" id="classical-channel" aria-labelledby="channel-title" hidden>
       <header><div><p class="eyebrow">THE ONLY WAY ACROSS</p><h2 id="channel-title">Classical channel</h2></div><button type="button" class="icon-button" id="close-channel" aria-label="Close classical channel">&times;</button></header>
       <div class="channel-layout"><div id="messages" class="message-log" role="log" aria-label="Classical transmissions" aria-live="polite"><p class="empty-state">No transmissions yet. Agree on a code with your partner.</p></div>
@@ -112,7 +116,7 @@
         </form>
       </div>
     </section>
-    <footer class="action-bar"><div class="utility-actions">
+    <footer id="bell-actions" class="action-bar"><div class="utility-actions">
       <button type="button" id="open-notebook" class="utility-button" aria-haspopup="dialog">Notebook <span class="count-badge" id="note-count">0</span></button><span class="action-divider"></span>
       <button type="button" id="toggle-channel" class="utility-button" aria-expanded="false" aria-controls="classical-channel">Classical channel <span class="count-badge" id="message-count">0</span></button>
       </div><div class="run-actions"><span id="run-hint">Finish both players' choices to begin<span>1 source credit / 1,024 measurement shots</span></span><button type="button" id="run-experiment" class="run-button" disabled>Run experiment</button></div>

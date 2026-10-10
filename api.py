@@ -11,13 +11,18 @@ import json
 from statistics import fmean
 
 from bell import correlation_statistics, measure_bell, preparation_fidelity
-from teleport import teleport
+from teleport import teleport, prepare_calibration, finish_calibration, cancel_calibration
+from warden import measure_link, open_link, close_link
+from qft import measure_periodic
 
 __all__ = [
     "bell_experiment",
     "teleport_experiment",
     "warden_experiment",
     "period_experiment",
+    "teleport_prepare", "teleport_finish", "teleport_cancel",
+    "warden_open", "warden_close",
+    "qft_experiment",
 ]
 
 
@@ -97,11 +102,36 @@ def _unavailable_experiment(name: str, config: dict, shots: int) -> dict:
     }
 
 
-def warden_experiment(config: dict, shots: int) -> dict:
-    """Report unavailable mechanics until warden.py is implemented."""
-    return _unavailable_experiment("warden", config, shots)
+def warden_experiment(config: dict, shots: int, *, backend=None, seed=None) -> dict:
+    """Complementary link statistics; a hidden link's attack is not disclosed."""
+    return measure_link(config, shots, backend=backend, seed=seed)
+
+
+def warden_open(*, scenario=None, seed=None):
+    return open_link(scenario=scenario, seed=seed)
+
+
+def warden_close(link_id):
+    return close_link(link_id)
 
 
 def period_experiment(config: dict, shots: int) -> dict:
     """Report unavailable mechanics until period.py is implemented."""
     return _unavailable_experiment("period", config, shots)
+
+
+def teleport_prepare(state_name, operation, *, backend=None, seed=None):
+    return prepare_calibration(state_name, operation, backend=backend, seed=seed)
+
+
+def teleport_finish(trial_id, correction):
+    return finish_calibration(trial_id, correction)
+
+
+def teleport_cancel(trial_id):
+    return cancel_calibration(trial_id)
+
+
+def qft_experiment(config, shots, *, backend=None, seed=None):
+    """Small periodic-state Fourier data; not a factoring experiment."""
+    return measure_periodic(config, shots, backend=backend, seed=seed)

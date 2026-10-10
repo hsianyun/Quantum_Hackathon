@@ -1,8 +1,9 @@
 import { createSession, chooseGate, commitAlice, chooseBasis, choosePrediction, commitBob,
   beginExperiment, experimentRequest, finishExperiment, failExperiment, readyToRun,
   nextTrial, restartLevel, sendMessage, TRIAL_PAIRS } from "./level-one.js";
-import { bell_experiment } from "api";
-import { createBellExperiment } from "./quantum-client.js";
+import { bell_experiment, teleport_prepare, teleport_finish, teleport_cancel, warden_open, warden_experiment, warden_close } from "api";
+import { createBellExperiment, createCalibrationExperiments, createSecurityExperiments } from "./quantum-client.js";
+import { mountCalibration, mountSecurity } from "./later-level.js";
 import { addNote } from "./notebook.js";
 import { renderAlice } from "./alice.js";
 import { renderBob } from "./bob.js";
@@ -12,6 +13,7 @@ import { renderMessages, renderNotes } from "./radio.js";
 // Qollab statically discovers the Python import and injects the selected backend.
 const bellExperiment = createBellExperiment(bell_experiment, backend);
 let session = createSession();
+let later = null;
 const byId = (id) => document.getElementById(id);
 const announce = (message) => { byId("system-message").textContent = message; };
 
@@ -28,6 +30,7 @@ function renderVerification() {
     byId("verification").classList.toggle("is-solved", result.solved);
   }
   byId("completion-banner").hidden = !completed;
+  byId("next-level").disabled = !completed;
   byId("why-toggle").disabled = !completed;
   byId("why-status").textContent = completed ? "Unlocked / fragment secured" : "Locked / solve Bell Lock to unlock";
   // Populate explanatory content only after completion, never in the initial DOM.
@@ -127,6 +130,22 @@ byId("run-experiment").addEventListener("click", async () => {
   }
 });
 byId("reset-level").addEventListener("click", () => update(restartLevel, "Resources restored. Notebook discoveries and earned fragments retained."));
+byId("next-level").addEventListener("click", () => {
+  if (!session.completed || session.running || later) return;
+  byId("bell-level").hidden = true;
+  // Keep notebook/channel controls available while replacing Bell run controls.
+  byId("reset-level").hidden = true;
+  byId("run-experiment").hidden = true;
+  byId("run-hint").hidden = true;
+  byId("later-level").hidden = false;
+  later = mountCalibration(session.game, session.notes,
+    createCalibrationExperiments(teleport_prepare, teleport_finish, teleport_cancel, backend), (calibration) => {
+      later = mountSecurity(calibration.game, calibration.notes,
+        createSecurityExperiments(warden_open, warden_experiment, warden_close, backend));
+      announce("Security lab allocated: 12 sampling credits and 24 classical bits. Test complementary bases before trusting a link.");
+    });
+  announce("Calibration lab allocated: 12 source credits and 24 classical bits. Discover recovery together.");
+});
 byId("why-toggle").addEventListener("click", () => {
   if (!session.completed) return;
   const open = byId("why-content").hidden;
@@ -143,6 +162,11 @@ byId("toggle-channel").addEventListener("click", () => toggleChannel(byId("class
 byId("close-channel").addEventListener("click", () => toggleChannel(false));
 byId("message-form").addEventListener("submit", (event) => {
   event.preventDefault();
+  if (later) {
+    try { later.message(byId("message-sender").value, byId("message-payload").value.trim()); byId("message-payload").value = ""; announce("Transmission delivered."); }
+    catch (error) { announce(error.message); }
+    return;
+  }
   if (update((s) => sendMessage(s, byId("message-sender").value, byId("message-payload").value), "Transmission delivered. Classical bits spent.")) {
     byId("message-payload").value = ""; byId("message-payload").focus();
   }
@@ -153,6 +177,7 @@ byId("notebook").addEventListener("close", () => byId("open-notebook").focus());
 byId("note-form").addEventListener("submit", (event) => {
   event.preventDefault();
   try {
+    if (later) { later.note(byId("note-text").value); byId("note-text").value = ""; byId("note-status").textContent = "Field note saved."; return; }
     session = { ...session, notes: addNote(session.notes, byId("note-text").value) }; render();
     byId("note-text").value = ""; byId("note-status").textContent = "Field note saved."; byId("note-text").focus();
   } catch (error) { byId("note-status").textContent = error.message; }

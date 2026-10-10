@@ -88,7 +88,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(result["mean_fidelity"], 0.5)
 
     def test_unavailable_experiments_are_explicit_json_results(self):
-        for name, experiment in (("warden", warden_experiment), ("period", period_experiment)):
+        for name, experiment in (("period", period_experiment),):
             with self.subTest(experiment=name):
                 config = {"parameters": {"example": [1, True, None]}}
                 before = json.dumps(config)
@@ -169,6 +169,46 @@ class ApiTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bell_experiment(a, b, shots, preparation_gate=gate, backend=backend)
         backend.run.assert_not_called()
+
+    def test_warden_wrapper_preserves_real_physics_and_hidden_link(self):
+        from api import warden_open, warden_close
+        link = warden_open(scenario="z")
+        try:
+            config = {"link_id": link["link_id"], "basis_a": "X", "basis_b": "X"}
+            original = dict(config)
+            result = warden_experiment(config, 4096, backend=BasicSimulator(seed_simulator=42))
+            self.assert_json_roundtrip(result)
+            self.assertEqual(config, original)
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["matched_shots"], 4096)
+            self.assertTrue(0.45 < result["qber"] < 0.55)
+            self.assertNotIn("attack", result)
+        finally:
+            warden_close(link["link_id"])
+
+    def test_staged_teleport_api_exposes_bits_then_committed_verification(self):
+        from api import teleport_prepare, teleport_finish, teleport_cancel
+        trial = teleport_prepare("+i", "CX_H", seed=3)
+        try:
+            self.assert_json_roundtrip(trial)
+            self.assertNotIn("fidelity", trial)
+            bits = trial["alice_bits"]
+            correction = ("X" if bits[1] else "") + ("Z" if bits[0] else "") or "I"
+            result = teleport_finish(trial["trial_id"], correction)
+            self.assert_json_roundtrip(result)
+            self.assertAlmostEqual(result["fidelity"], 1, places=12)
+        finally:
+            teleport_cancel(trial["trial_id"])
+
+    def test_qft_json_utility_does_not_claim_period_factoring(self):
+        from api import qft_experiment
+        for inverse in (False, True):
+            result = qft_experiment({"period": 4, "inverse": inverse}, 1024, backend=BasicSimulator(seed_simulator=42))
+            self.assert_json_roundtrip(result)
+            self.assertEqual(result["dominant_positions"], [0, 4, 8, 12])
+            self.assertEqual(result["experiment"], "qft")
+            self.assertNotIn("factors", result)
+            self.assertEqual(period_experiment({}, 8)["status"], "not_implemented")
 
 
 if __name__ == "__main__":

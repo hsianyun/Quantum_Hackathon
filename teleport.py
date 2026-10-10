@@ -8,11 +8,23 @@ No automatic correction or answer mapping is supplied to the game.
 
 from math import isfinite
 from numbers import Real
+from math import pi
+from time import monotonic
+from uuid import uuid4
+from copy import deepcopy
+
+import numpy as np
 
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Pauli, Statevector, partial_trace, state_fidelity
 
 from bell import prepare_bell
+
+CALIBRATION_STATES = {"0": (0.0, 0.0), "+": (pi / 2, 0.0), "+i": (pi / 2, pi / 2)}
+OPERATIONS = ("CX_H", "H_CX", "CX_ONLY")
+_trials = {}
+_TRIAL_TTL = 1800
+_MAX_TRIALS = 32
 
 
 def prepare_state(theta: float, phi: float) -> QuantumCircuit:
@@ -113,3 +125,115 @@ def teleport(
         },
         "fidelity": max(0.0, min(1.0, fidelity)),
     }
+
+
+def calibration_circuit(state_name, operation):
+    """Alice's actual operation, q0/q1 -> c0/c1; q2 stays unmeasured."""
+    if not isinstance(state_name, str) or state_name not in CALIBRATION_STATES:
+        raise ValueError("Calibration state must be 0, +, or +i.")
+    if operation not in OPERATIONS:
+        raise ValueError("Operation must be CX_H, H_CX, or CX_ONLY.")
+    circuit = QuantumCircuit(3, 2)
+    circuit.compose(prepare_state(*CALIBRATION_STATES[state_name]), [0], inplace=True)
+    circuit.compose(prepare_bell(), [1, 2], inplace=True)
+    if operation == "H_CX":
+        circuit.h(0)
+    circuit.cx(0, 1)
+    if operation == "CX_H":
+        circuit.h(0)
+    circuit.measure(0, 0)
+    circuit.measure(1, 1)
+    return circuit
+
+
+def _check_calibration_backend(backend):
+    """Only explicitly ideal simulator diagnostics; never substitute a device."""
+    if backend is None:
+        return
+    from qiskit.providers.basic_provider import BasicSimulator
+    supported = isinstance(backend, BasicSimulator)
+    if not supported:
+        configuration = getattr(backend, "configuration", None)
+        supported = callable(configuration) and getattr(configuration(), "simulator", False) is True
+    options = getattr(backend, "options", None)
+    if not supported or getattr(options, "noise_model", None) is not None or getattr(options, "initial_statevector", None) is not None:
+        raise ValueError("Calibration requires an ideal local simulator; hardware/noisy/unknown backends are unsupported.")
+
+
+def _expire_trials():
+    now = monotonic()
+    for key in list(_trials):
+        if now - _trials[key]["created"] >= _TRIAL_TTL:
+            del _trials[key]
+
+
+def prepare_calibration(state_name, operation, *, backend=None, seed=None):
+    """Measure once; only an opaque handle and Alice's bits leave Python."""
+    circuit = calibration_circuit(state_name, operation)
+    _check_calibration_backend(backend)
+    _expire_trials()
+    if len(_trials) >= _MAX_TRIALS:
+        raise ValueError("Too many retained calibration trials; cancel/reset before retrying.")
+    state = Statevector.from_instruction(circuit.remove_final_measurements(inplace=False))
+    if backend is None:
+        state.seed(seed)
+        outcome, collapsed = state.measure([0, 1])
+        bits = [int(bit) for bit in outcome[::-1]]
+    else:
+        # The selected backend supplies the real measurement outcome. Exact
+        # conditional state/fidelity remains an explicitly ideal diagnostic.
+        counts = backend.run(circuit, shots=1).result().get_counts()
+        if len(counts) != 1 or list(counts.values()) != [1]:
+            raise ValueError("Simulator returned an invalid one-shot measurement.")
+        outcome = next(iter(counts)).replace(" ", "")
+        if len(outcome) != 2 or any(bit not in "01" for bit in outcome):
+            raise ValueError("Simulator returned invalid Alice bits.")
+        bits = [int(bit) for bit in outcome[::-1]]
+        data = np.array(state.data, copy=True)
+        for index in range(len(data)):
+            if [index & 1, (index >> 1) & 1] != bits:
+                data[index] = 0
+        norm = float(np.linalg.norm(data))
+        if norm < 1e-12:
+            raise ValueError("Simulator outcome is impossible for the ideal calibration circuit.")
+        collapsed = Statevector(data / norm)
+    trial_id = uuid4().hex
+    metadata = {"experiment": "calibration", "status": "ok", "trial_id": trial_id,
+                "state_name": state_name, "operation": operation, "alice_bits": bits,
+                "diagnostic_source": "ideal_circuit"}
+    _trials[trial_id] = {"created": monotonic(), "metadata": metadata,
+                         "bob": partial_trace(collapsed, [0, 1]),
+                         "target": Statevector.from_instruction(prepare_state(*CALIBRATION_STATES[state_name])),
+                         "result": None}
+    return deepcopy(metadata)
+
+
+def finish_calibration(trial_id, correction):
+    """Correction is committed once. Same-correction retries are idempotent."""
+    if correction not in ("I", "X", "Z", "XZ"):
+        raise ValueError("Correction must be I, X, Z, or XZ.")
+    _expire_trials()
+    if not isinstance(trial_id, str) or trial_id not in _trials:
+        raise ValueError("Calibration trial is missing, cancelled or expired.")
+    trial = _trials[trial_id]
+    if trial["result"] is not None:
+        if trial["result"]["correction"] != correction:
+            raise ValueError("This trial's correction is already committed.")
+        return deepcopy(trial["result"])
+    bob = trial["bob"]
+    for gate in correction:
+        if gate != "I":
+            bob = bob.evolve(Pauli(gate))
+    fidelity = float(state_fidelity(trial["target"], bob))
+    result = {**trial["metadata"], "correction": correction,
+              "fidelity": min(1.0, max(0.0, fidelity)),
+              "bob_probabilities": {str(i): float(p) for i, p in enumerate(bob.probabilities())}}
+    trial["result"] = result
+    return deepcopy(result)
+
+
+def cancel_calibration(trial_id):
+    if not isinstance(trial_id, str):
+        raise ValueError("trial_id must be a string.")
+    return {"experiment": "calibration", "status": "ok", "trial_id": trial_id,
+            "cancelled": _trials.pop(trial_id, None) is not None}

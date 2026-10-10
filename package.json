@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs",
-    "test:integration": "node --test test_qollab_integration.mjs"
+    "test": "node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs test_calibration.mjs test_security.mjs",
+    "test:integration": "node --test test_qollab_integration.mjs test_later_integration.mjs"
   }
 }

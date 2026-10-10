@@ -24,3 +24,43 @@ export function createBellExperiment(pythonExperiment, quantumBackend) {
     }
   };
 }
+
+/** Generic async JSON conversion; no HTTP transport or simulator fallback. */
+export async function callPython(pythonFunction, args, kwargs = {}) {
+  let result;
+  try {
+    if (typeof pythonFunction?.callPromisingKwargs !== "function") throw new Error("Qollab's asynchronous Python bridge is unavailable");
+    result = await pythonFunction.callPromisingKwargs(...args, kwargs);
+    return typeof result?.toJs === "function" ? result.toJs({ dict_converter: Object.fromEntries }) : result;
+  } catch (error) {
+    throw new Error(`Python experiment failed: ${error?.message || error}. No new experiment resources were spent.`, { cause: error });
+  } finally {
+    result?.destroy?.();
+  }
+}
+export function createCalibrationExperiments(prepare, finish, cancel, backend) {
+  return {
+    prepare: (request) => {
+      if (!backend) return Promise.reject(new Error("Choose a local simulator in Qollab's Run dialog."));
+      return callPython(prepare, [request.state_name, request.operation], { backend });
+    },
+    finish: (request) => callPython(finish, [request.trial_id, request.correction]),
+    cancel: (trial_id) => callPython(cancel, [trial_id]),
+  };
+}
+export function createSecurityExperiments(open, experiment, close, backend) {
+  return {
+    open: () => callPython(open, []),
+    run: ({ config, shots }) => {
+      if (!backend) return Promise.reject(new Error("Qollab's selected backend is unavailable."));
+      return callPython(experiment, [config, shots], { backend });
+    },
+    close: (link_id) => callPython(close, [link_id]),
+  };
+}
+export function createQftExperiment(experiment, backend) {
+  return ({ config, shots }) => {
+    if (!backend) return Promise.reject(new Error("Qollab's selected backend is unavailable."));
+    return callPython(experiment, [config, shots], { backend });
+  };
+}
