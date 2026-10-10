@@ -1,0 +1,9 @@
+{
+  "name": "split-vault",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs",
+    "test:integration": "node --test test_qollab_integration.mjs"
+  }
+}

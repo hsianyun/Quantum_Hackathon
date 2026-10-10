@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a1017"><meta name="description" content="Two rooms. One entangled system. Solve the Bell Lock together.">
+  <title>Split Vault | Bell Lock</title>
+  <link rel="stylesheet" href="./main.css"><script type="module" src="./main.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#rooms">Skip to the rooms</a>
+<div class="app-shell">
+  <header class="masthead">
+    <a class="wordmark" href="./index.html" aria-label="Split Vault home"><span class="vault-mark" aria-hidden="true"><i></i><i></i></span>SPLIT<span>VAULT</span><span class="wordmark-dot">.</span></a>
+    <p class="masthead-caption">A COOPERATIVE QUANTUM ESCAPE</p>
+    <span class="demo-badge"><span class="status-dot"></span> QUANTUM EXPERIMENTS</span>
+  </header>
+  <section class="status-bar" aria-label="Shared game resources">
+    <div class="resource-label"><span class="link-symbol" aria-hidden="true">&#8734;</span> SHARED SYSTEM</div>
+    <div class="resource"><span>Bell pairs</span><strong id="bell-pairs">12</strong><span class="resource-unit">CREDITS</span></div>
+    <div class="resource"><span>Classical bits</span><strong id="classical-bits">20</strong><span class="resource-unit">BITS</span></div>
+    <div class="resource suspicion-resource"><span>Warden suspicion</span><strong id="suspicion">0%</strong><span class="suspicion-track" aria-hidden="true"><i id="suspicion-fill"></i></span></div>
+    <div class="resource fragments-resource"><span>Vault fragments</span><strong id="fragments">00</strong><span class="fragment-icon" aria-hidden="true">&#9671;</span></div>
+  </section>
+  <main>
+    <section class="mission-heading" aria-labelledby="mission-title">
+      <div><p class="eyebrow"><span id="act-level">ACT 01 / LEVEL 01</span><span class="small-divider"></span> ENTANGLEMENT</p>
+        <h1 id="mission-title">Bell Lock<span>.</span></h1>
+        <p class="mission-description">Repair the source. Predict the pattern. Prepare a Bell pair and match Bob's prediction to open the vault.</p>
+        <p class="field-hint">For repeated trials, choose a local simulator in Qollab's Run dialog. IonQ backends allow one experiment per Run.</p>
+      </div>
+      <button type="button" id="reset-level" class="quiet-button">Reset level</button>
+    </section>
+    <ol class="experiment-steps" aria-label="Experiment sequence">
+      <li id="step-predict" aria-current="step"><span>01</span> Predict</li><li id="step-act"><span>02</span> Act</li><li id="step-exchange"><span>03</span> Exchange</li><li id="step-verify"><span>04</span> Verify</li><li class="step-hint" id="sequence-hint">Two perspectives. One experiment.</li>
+    </ol>
+    <div class="rooms" id="rooms">
+      <section class="room alice-room" aria-labelledby="alice-title">
+        <header class="room-header"><div class="role-avatar" aria-hidden="true">A</div><div><p class="eyebrow">ROOM A / PREPARATION</p><h2 id="alice-title">Alice<span>'s room</span></h2></div><span class="room-connection"><i></i> LINKED</span></header>
+        <p class="role-description">The source has a missing gate. Choose the operation, commit it, then select how to measure your qubit.</p>
+        <div class="apparatus">
+          <div class="apparatus-topline"><span>INCOMPLETE BELL CIRCUIT</span><span id="circuit-status">GATE MISSING</span></div>
+          <svg class="source-diagram" viewBox="0 0 460 126" role="img" aria-label="Alice starts in zero, passes through a missing gate, then controls an X on Bob's zero qubit. Both qubits are then measured in selected bases.">
+            <g stroke="#49606c" fill="none"><path d="M102 39H410M102 87H410"/><path d="M274 39V87" stroke="#e7b577"/><rect x="167" y="20" width="40" height="38" rx="4" stroke="#6fe2d9" stroke-dasharray="4 3" fill="#152e32"/><circle cx="274" cy="87" r="13" stroke="#e7b577"/><path d="M261 87H287M274 74V100" stroke="#e7b577"/></g>
+            <circle cx="274" cy="39" r="5" fill="#6fe2d9"/>
+            <g fill="#aebfca" font-family="monospace" font-size="14"><text x="21" y="44">A |0&gt;</text><text x="21" y="92">B |0&gt;</text><text x="333" y="30" font-size="10">MEASURE</text><text x="258" y="119" font-size="10">CX</text></g>
+            <text id="circuit-gate" x="187" y="45" text-anchor="middle" fill="#6fe2d9" font-family="monospace" font-size="20">?</text>
+          </svg>
+          <div class="apparatus-caption">TARGET: A SHARED BELL PAIR</div>
+        </div>
+        <fieldset id="alice-gate-group" class="control-group"><legend><span class="control-number">01</span> Choose the missing gate</legend>
+          <div class="prediction-options gate-options">
+            <label><input type="radio" name="alice-gate" value="H"><span>H</span></label>
+            <label><input type="radio" name="alice-gate" value="X"><span>X</span></label>
+            <label><input type="radio" name="alice-gate" value="Z"><span>Z</span></label>
+            <label><input type="radio" name="alice-gate" value="S"><span>S</span></label>
+          </div>
+        </fieldset>
+        <button type="button" class="commit-button" id="alice-commit" disabled>Commit gate</button>
+        <p class="commit-hint" id="alice-hint">Choose a gate. Committing locks it for this trial.</p>
+        <fieldset id="alice-basis-group" class="control-group alice-basis-group" disabled><legend><span class="control-number">02</span> Select your measurement basis</legend>
+          <div class="basis-options">
+            <label class="basis-choice"><input type="radio" name="alice-basis" value="Z"><span><b>Z</b><span>Computational<small>|0&gt; / |1&gt;</small></span><i aria-hidden="true"></i></span></label>
+            <label class="basis-choice"><input type="radio" name="alice-basis" value="X"><span><b>X</b><span>X basis<small>|+&gt; / |&minus;&gt;</small></span><i aria-hidden="true"></i></span></label>
+          </div>
+        </fieldset>
+      </section>
+      <section class="room bob-room" aria-labelledby="bob-title">
+        <header class="room-header"><div class="role-avatar" aria-hidden="true">B</div><div><p class="eyebrow">ROOM B / MEASUREMENT</p><h2 id="bob-title">Bob<span>'s room</span></h2></div><span class="room-connection"><i></i> LINKED</span></header>
+        <p class="role-description">Predict the relationship between your bits before the receiver opens. Select your basis and commit both choices.</p>
+        <div class="apparatus receiver">
+          <div class="apparatus-topline"><span>MEASUREMENT RECEIVER</span><span id="receiver-state">STANDBY</span></div>
+          <div id="histogram" class="histogram" role="img" aria-label="No measurements yet. Both players must commit first.">
+            <div class="histogram-bar"><span class="bar-value">--</span><div class="bar-track"><i></i></div><span class="bar-label">00</span></div>
+            <div class="histogram-bar"><span class="bar-value">--</span><div class="bar-track"><i></i></div><span class="bar-label">01</span></div>
+            <div class="histogram-bar"><span class="bar-value">--</span><div class="bar-track"><i></i></div><span class="bar-label">10</span></div>
+            <div class="histogram-bar"><span class="bar-value">--</span><div class="bar-track"><i></i></div><span class="bar-label">11</span></div>
+          </div>
+          <div class="apparatus-caption" id="result-caption">AWAITING BOTH COMMITMENTS</div>
+        </div>
+        <fieldset id="bob-prediction-group" class="control-group prediction-group"><legend><span class="control-number">01</span> Predict your shared outcomes</legend>
+          <p class="field-hint">Correlated: mostly matching. Anticorrelated: mostly different. Random: no strong relationship.</p>
+          <div class="prediction-options">
+            <label><input type="radio" name="bob-prediction" value="correlated"><span>Correlated</span></label>
+            <label><input type="radio" name="bob-prediction" value="anticorrelated"><span>Anticorrelated</span></label>
+            <label><input type="radio" name="bob-prediction" value="random"><span>Random</span></label>
+          </div>
+        </fieldset>
+        <fieldset id="bob-basis-group" class="control-group" disabled><legend><span class="control-number">02</span> Select your measurement basis</legend>
+          <div class="basis-options">
+            <label class="basis-choice"><input type="radio" name="bob-basis" value="Z"><span><b>Z</b><span>Computational<small>|0&gt; / |1&gt;</small></span><i aria-hidden="true"></i></span></label>
+            <label class="basis-choice"><input type="radio" name="bob-basis" value="X"><span><b>X</b><span>X basis<small>|+&gt; / |&minus;&gt;</small></span><i aria-hidden="true"></i></span></label>
+          </div>
+        </fieldset>
+        <button type="button" class="commit-button" id="bob-commit" disabled>Commit prediction &amp; basis</button>
+        <p class="commit-hint" id="bob-hint">Make your prediction before the receiver opens.</p>
+      </section>
+    </div>
+    <section id="verification" class="verification" aria-labelledby="verification-title" hidden>
+      <h2 id="verification-title" tabindex="-1"></h2><p id="prediction-comparison"></p><p id="preparation-comparison"></p>
+      <p class="field-hint">Histogram labels show Alice's bit first, then Bob's.</p>
+    </section>
+    <p id="completion-banner" class="completion-banner" role="status" hidden>Fragment 01 secured. Bell Lock complete. You can keep experimenting; this level awards one fragment.</p>
+    <section class="why-panel" aria-label="Level explanation">
+      <button type="button" id="why-toggle" class="why-toggle" aria-controls="why-content" aria-expanded="false" disabled>Why this works <span id="why-status">Locked / solve Bell Lock to unlock</span></button>
+      <div id="why-content" hidden></div>
+    </section>
+    <section class="channel" id="classical-channel" aria-labelledby="channel-title" hidden>
+      <header><div><p class="eyebrow">THE ONLY WAY ACROSS</p><h2 id="channel-title">Classical channel</h2></div><button type="button" class="icon-button" id="close-channel" aria-label="Close classical channel">&times;</button></header>
+      <div class="channel-layout"><div id="messages" class="message-log" role="log" aria-label="Classical transmissions" aria-live="polite"><p class="empty-state">No transmissions yet. Agree on a code with your partner.</p></div>
+        <form id="message-form"><label for="message-sender">Transmit as</label><select id="message-sender"><option value="alice">Alice to Bob</option><option value="bob">Bob to Alice</option></select>
+          <label for="message-payload">Binary message</label><div class="message-compose"><input id="message-payload" type="text" inputmode="numeric" pattern="[01]{1,8}" maxlength="8" placeholder="e.g. 0101" required aria-describedby="message-help"><button type="submit" class="small-button">Send</button></div><p class="field-hint" id="message-help">1-8 binary digits. Each digit spends one classical bit.</p>
+        </form>
+      </div>
+    </section>
+    <footer class="action-bar"><div class="utility-actions">
+      <button type="button" id="open-notebook" class="utility-button" aria-haspopup="dialog">Notebook <span class="count-badge" id="note-count">0</span></button><span class="action-divider"></span>
+      <button type="button" id="toggle-channel" class="utility-button" aria-expanded="false" aria-controls="classical-channel">Classical channel <span class="count-badge" id="message-count">0</span></button>
+      </div><div class="run-actions"><span id="run-hint">Finish both players' choices to begin<span>1 source credit / 1,024 measurement shots</span></span><button type="button" id="run-experiment" class="run-button" disabled>Run experiment</button></div>
+    </footer>
+    <p class="system-message" id="system-message" role="status" aria-live="polite">Alice: choose the missing gate. Bob: predict the pattern before any results arrive.</p>
+  </main>
+  <div class="page-footer"><span>SPLIT VAULT / EXPERIMENTAL SYSTEMS</span><span>TRUST THE EXPERIMENT. TALK TO YOUR PARTNER.</span></div>
+</div>
+<dialog id="notebook" class="notebook-drawer" aria-labelledby="notebook-title"><div class="drawer-content">
+  <header><div><p class="eyebrow">YOUR SHARED FIELD NOTES</p><h2 id="notebook-title">The notebook<span>.</span></h2></div><button type="button" id="close-notebook" class="icon-button" aria-label="Close notebook">&times;</button></header>
+  <p class="drawer-intro">Keep your hypotheses. Compare your trials. Find the pattern together.</p><ol id="notes" class="notes-list"><li class="empty-state">A blank page, for now. Your experiments will be recorded here.</li></ol>
+  <form id="note-form"><label for="note-text">Add a field note</label><textarea id="note-text" maxlength="1000" rows="4" placeholder="What did you notice?" required></textarea><button type="submit" class="small-button">Save note</button></form>
+  <p class="field-hint">Notes stay in this tab. Reloading starts a fresh session.</p><p id="note-status" role="status" aria-live="polite"></p>
+</div></dialog>
+<noscript><p class="noscript-message">Enable JavaScript to operate the two rooms.</p></noscript>
+</body>
+</html>
