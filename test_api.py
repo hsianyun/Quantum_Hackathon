@@ -170,6 +170,46 @@ class ApiTests(unittest.TestCase):
                 bell_experiment(a, b, shots, preparation_gate=gate, backend=backend)
         backend.run.assert_not_called()
 
+    def test_json_text_configs_preserve_hidden_link_and_real_selected_backend(self):
+        from api import warden_open, warden_close, qft_experiment
+        link = warden_open(scenario="z")
+        try:
+            for basis in ("Z", "X"):
+                config = {"basis_a": basis, "basis_b": basis, "link_id": link["link_id"]}
+                result = warden_experiment(json.dumps(config), 4096,
+                                           backend=BasicSimulator(seed_simulator=42))
+                self.assert_json_roundtrip(result)
+                self.assertEqual(result["link_id"], link["link_id"])
+                self.assertEqual((result["basis_a"], result["basis_b"]), (basis, basis))
+                self.assertEqual(sum(result["counts"].values()), 4096)
+                self.assertNotIn("attack", result)
+                if basis == "Z":
+                    self.assertEqual(result["qber"], 0)
+                else:
+                    self.assertTrue(0.45 < result["qber"] < 0.55)
+            result = qft_experiment(json.dumps({"num_qubits": 4, "period": 2}), 4096,
+                                    backend=BasicSimulator(seed_simulator=42))
+            self.assert_json_roundtrip(result)
+            self.assertEqual(result["dominant_positions"], [0, 8])
+        finally:
+            warden_close(link["link_id"])
+
+    def test_invalid_json_text_configs_never_submit_backend_jobs(self):
+        from api import qft_experiment
+        backend = Mock()
+        for experiment in (warden_experiment, qft_experiment):
+            for config in ("{", "[]", "null", '"config"', "42", '{"unknown": 1}'):
+                with self.subTest(experiment=experiment.__name__, config=config):
+                    with self.assertRaises(ValueError):
+                        experiment(config, 8, backend=backend)
+        for config in ('{"basis_a": "Y"}', '{"attack": "z", "link_id": "missing"}',
+                       '{"link_id": "missing"}'):
+            with self.assertRaises(ValueError):
+                warden_experiment(config, 8, backend=backend)
+        with self.assertRaises(ValueError):
+            qft_experiment('{"num_qubits": 4, "period": 3}', 8, backend=backend)
+        backend.run.assert_not_called()
+
     def test_warden_wrapper_preserves_real_physics_and_hidden_link(self):
         from api import warden_open, warden_close
         link = warden_open(scenario="z")

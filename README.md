@@ -142,6 +142,11 @@ print(json.dumps(teleport_experiment(1.1, 0.7, "Z", 16)))
   calibration protocol. `qft_experiment` exposes small Fourier utilities.
   See the current API contracts and verification evidence in `VERIFY.md`.
 
+Warden and QFT configs accept Python dictionaries or JSON object text.
+Their JavaScript adapters use `JSON.stringify(config)` because the Python
+bridge may otherwise expose a JavaScript object as a JsProxy rather than a
+dictionary. Update both `quantum-client.js` and `api.py` together in Qollab.
+
 Implemented experiments return `status: "ok"`. Sampling functions require a
 positive integer shot count; invalid arguments raise `ValueError`.
 

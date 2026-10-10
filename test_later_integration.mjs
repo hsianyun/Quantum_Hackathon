@@ -43,6 +43,8 @@ for line in sys.stdin:
   return (method) => ({ callPromisingKwargs: async (...args) => {
     const kwargs = args.pop();
     if (["prepare", "run", "qft"].includes(method)) assert.ok(kwargs.backend, "Selected backend must be forwarded");
+    if (["run", "qft"].includes(method)) assert.equal(typeof args[0], "string",
+      "Object configs must cross the Python bridge as JSON text, not a JavaScript proxy");
     child.stdin.write(JSON.stringify({ method, args }) + "\n");
     const reply = await replies.next();
     assert.equal(reply.done, false, launchError?.message || stderr || "Python stopped");

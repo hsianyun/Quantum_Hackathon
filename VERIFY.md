@@ -1,6 +1,27 @@
 # Split Vault verification record and gates
 
-## Implementation run — current state (2026-10-10)
+## Stage 3 bridge repair — current state (2026-10-10)
+
+The reported hosted Warden failure occurred at the strict Python-dictionary
+config check. Passing a plain JavaScript object through the bridge can produce
+a JsProxy instead. Warden and QFT adapters now send JSON text; api.py decodes
+it into a dictionary before existing core validation. Python dictionary callers
+remain supported, and the selected backend is passed separately without change.
+Malformed JSON, non-object JSON, unknown keys, invalid bases and missing links
+are rejected before submitting a job.
+
+Added API regressions verify real selected-backend hidden-link ZZ/XX and QFT
+results from JSON text. Unit tests verify the serialized bridge argument;
+stdio integration now requires it, preventing its automatic JSON transport
+from masking this conversion defect. The prior transport converted JS objects
+to Python dictionaries even though the hosted bridge need not do so.
+
+Regression: `.venv/bin/python -m unittest discover -v` = 61 passed;
+`npm test` = 45 passed; `npm run test:integration` = 4 passed. All exit 0,
+zero failures/skips. Diff and JavaScript syntax checks passed. This repair was
+verified locally; the updated files still need a hosted Qollab rerun.
+
+## Implementation run — Q14 checkpoint (2026-10-10)
 
 The authorized pipeline completed its final regression/review step Q14. Local
 quantum, game and stdio integration evidence is distinct from actual browser,

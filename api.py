@@ -102,9 +102,21 @@ def _unavailable_experiment(name: str, config: dict, shots: int) -> dict:
     }
 
 
-def warden_experiment(config: dict, shots: int, *, backend=None, seed=None) -> dict:
+def _decode_config(config: dict | str) -> dict:
+    """JS objects may arrive as JsProxy; JSON text crosses the bridge reliably."""
+    if isinstance(config, str):
+        try:
+            config = json.loads(config)
+        except json.JSONDecodeError as error:
+            raise ValueError("config must contain a valid JSON object.") from error
+    if not isinstance(config, dict):
+        raise ValueError("config must be a dictionary or JSON object text.")
+    return config
+
+
+def warden_experiment(config: dict | str, shots: int, *, backend=None, seed=None) -> dict:
     """Complementary link statistics; a hidden link's attack is not disclosed."""
-    return measure_link(config, shots, backend=backend, seed=seed)
+    return measure_link(_decode_config(config), shots, backend=backend, seed=seed)
 
 
 def warden_open(*, scenario=None, seed=None):
@@ -134,4 +146,4 @@ def teleport_cancel(trial_id):
 
 def qft_experiment(config, shots, *, backend=None, seed=None):
     """Small periodic-state Fourier data; not a factoring experiment."""
-    return measure_periodic(config, shots, backend=backend, seed=seed)
+    return measure_periodic(_decode_config(config), shots, backend=backend, seed=seed)

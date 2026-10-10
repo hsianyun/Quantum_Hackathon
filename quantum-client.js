@@ -53,7 +53,8 @@ export function createSecurityExperiments(open, experiment, close, backend) {
     open: () => callPython(open, []),
     run: ({ config, shots }) => {
       if (!backend) return Promise.reject(new Error("Qollab's selected backend is unavailable."));
-      return callPython(experiment, [config, shots], { backend });
+      // Plain JS objects become JsProxy, not dict, in the Python bridge.
+      return callPython(experiment, [JSON.stringify(config), shots], { backend });
     },
     close: (link_id) => callPython(close, [link_id]),
   };
@@ -61,6 +62,6 @@ export function createSecurityExperiments(open, experiment, close, backend) {
 export function createQftExperiment(experiment, backend) {
   return ({ config, shots }) => {
     if (!backend) return Promise.reject(new Error("Qollab's selected backend is unavailable."));
-    return callPython(experiment, [config, shots], { backend });
+    return callPython(experiment, [JSON.stringify(config), shots], { backend });
   };
 }

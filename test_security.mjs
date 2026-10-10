@@ -68,7 +68,7 @@ test("QFT utility adapter preserves configuration and selected backend without s
   const config = Object.freeze({ num_qubits: 4, period: 2, inverse: true });
   const fn = { callPromisingKwargs: async (...args) => ({ toJs: () => args }) };
   const run = createQftExperiment(fn, backend);
-  assert.deepEqual(await run({ config, shots: 4096 }), [config, 4096, { backend }]);
+  assert.deepEqual(await run({ config, shots: 4096 }), [JSON.stringify(config), 4096, { backend }]);
   await assert.rejects(createQftExperiment(fn, undefined)({ config, shots: 4096 }), /backend/);
 });
 test("ZZ-only trust fails; attacked XX plus ZZ teaches rejection and awards once", () => {
@@ -117,7 +117,7 @@ test("security async adapter forwards selected backend and propagates errors wit
   const fn = { callPromisingKwargs: async (...args) => ({ toJs: () => args }) };
   const api = createSecurityExperiments(fn, fn, fn, backend);
   const request = { config: { basis_a: "X", basis_b: "X", link_id: id }, shots: 1024 };
-  assert.deepEqual(await api.run(request), [request.config, 1024, { backend }]);
+  assert.deepEqual(await api.run(request), [JSON.stringify(request.config), 1024, { backend }]);
   assert.deepEqual(await api.open(), [{}]);
   await assert.rejects(createSecurityExperiments(fn, { callPromisingKwargs: async () => { throw new Error("backend broke"); } }, fn, backend).run(request), /backend broke/);
   assert.equal(fetch.mock.callCount(), 0);

@@ -186,6 +186,12 @@ No diagnosed active blocker. Hosted/browser/IonQ checks remain separate.
 Calibration uses the selected ideal simulator for real measurement and labels
 conditional fidelity as ideal diagnostics; unsupported devices are rejected.
 
+Post-Q14 Stage 3 maintenance: fixed the reported Warden bridge config failure
+by sending JSON object text and decoding at the API boundary; applied the same
+repair to QFT's object-config adapter. Regression: 61 Python, 45 JS unit and
+4 real-Qiskit integration tests passed, zero failures/skips. Both api.py and
+quantum-client.js must be refreshed together in Qollab; hosted rerun pending.
+
 Full sequence:
 `B00 → T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → W10 → W11 → W12 →
 W13 → W14 → W15 → W16 → W17`, then conditionally
