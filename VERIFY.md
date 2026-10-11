@@ -1,6 +1,81 @@
 # Split Vault verification record and gates
 
-## Four-trial calibration and stage selector — current state (2026-10-11)
+## Stage 4–5 completed acceptance (2026-10-11)
+
+S40–S59 COMPLETE. Final registered commands ran from the repository root:
+
+| Command | Passing | Failing / skipped |
+| --- | ---: | ---: |
+| `.venv/bin/python -m unittest discover -v` | 69 | 0 / 0 |
+| `npm test` | 59 | 0 / 0 |
+| `npm run test:integration` | 6 | 0 / 0 |
+| `npm run test:browser` | 4 | 0 / 0 |
+
+All exit 0: **138 tests passed**, including the original Stage 1–3 regression.
+No dependencies changed. `git diff --check` and flat-layout checks passed:
+54 upload files, no project subdirectories. AGENTS, Bell/teleportation/Warden
+quantum cores, Stage 1/2/3 game rules and four-successful-trial calibration stay
+unchanged. Warden UI gains only completion-gated advancement to Stage 4.
+
+Gate order was preserved: initial baseline 61/49/4/1; quantum/API gate
+69/49/4/1; Stage 4 integration/full regression 69/55/5/2; Stage 5 final
+regression 69/59/6/4. Counts are Python/JS unit/real integration/Chromium.
+Stage 5 game/UI began only after the Stage 4 gate passed. A shared-button
+async timing regression caught by Chromium was corrected and all final suites
+rerun; no failing gate or weakened test remains.
+
+Quantum review: normalized equal periodic StatePreparation, forward positive
+Fourier convention with final swaps, q0 least significant, q3q2q1q0 counts.
+Independent Fourier matrices/sums and actual BasicSimulator r=2/4/8 sampling
+verify support, spacing, sign/order, totals and >=95% expected-peak mass.
+Selected backend execution is real; failure propagates without fallback.
+Private scenarios/trials are bounded/expired; all public results are finite
+JSON. Core tests check wrong phases/reversed bits, prediction/shot validation,
+failed backend, inconsistent spectrum, cleanup and immutable/idempotent claims.
+
+Game review: guided Alice infers input repetition; Bob independently predicts
+interference spacing after her one-bit hypothesis. Both commit before the
+histogram. Blind Alice receives only raw counts and enters integers/phases;
+Bob receives only claimed fractions and commits a period. Empty/injected answer
+metadata cannot bypass pre-commit response guards. Wrong interpretation/inference
+fails with physical diagnostics and no period field. Only joint success plus
+consistent measured support earns one fragment/unlocks verified markers and
+explanation. Legitimate exchange costs remain on later transport failure;
+failed requests add no debit. Same-trial verification retries run no new job.
+Resets retain scenario/discoveries/rewards and restore budget without duplicate
+fragments; switching stages preserves separate drafts, evidence and spending.
+
+Integration drives real Qiskit through the existing async JS adapter/stdio
+boundary: guided r2/r4 wrong/correct hypotheses; blind r2/r4/r8 wrong candidates,
+reversed readouts, manual fractions, phase-only exchange and correct solutions.
+Chromium drives real application DOM with a test-only bridge fixture: all prior
+flows, hidden/locked views, histogram/markers, wrong/correct play, verification
+transport retry, Warden→Radio→Hidden Period navigation, retained discoveries,
+one-time rewards and 390px layouts. Browser fixtures are separate from quantum
+execution evidence; there is no production server or synthetic histogram.
+
+HUMAN_CHECK: upload all 54 root files together to hosted Qollab's JS/Qiskit
+wrapper; run a selected local simulator and confirm static imports, JSON
+prediction arguments, awaited conversion/proxy cleanup and repeated trials.
+Check keyboard/focus/mobile behavior manually. IonQ/device execution remains
+unrun and permits one job per Run; use local simulation for repeated gameplay.
+No unresolved local technical blocker. Stop here; recommend Stage 6 / Circuit
+Architect under a new contract/authorization. N=15/Shor/finale/networking deferred.
+
+## Stage 4–5 run baseline (2026-10-11)
+
+Before edits at 1dbb00f: `.venv/bin/python -m unittest discover -v` passed 61;
+`npm test` passed 49; `npm run test:integration` passed 4; `npm run test:browser`
+passed 1. All exit 0, zero failures/skips. Clean checkout, 51 flat upload files.
+S40–S59 contracts/gates in TASKS govern this new user-authorized scope. Quantum
+gate must independently verify r=2/4/8 exact/sampled support, forward transform,
+q0/classical order, selected backend/failures and sanitized private scenarios.
+Stage 4 requires both predictions/exchange before measurement; Stage 5 tests
+raw-bit interpretation, phase claims, private period until full correct commit,
+wrong inference diagnostics, one-time costs/rewards, bounded retries/reset,
+real-Qiskit integration and browser views. Hosted Qollab/hardware remain pending.
+
+## Four-trial calibration and stage selector — previous checkpoint (2026-10-11)
 
 User-approved rule: four successful committed trials complete calibration.
 Repeated states and outcomes count; no random branch collection or required
@@ -366,11 +441,12 @@ Preserve runners. Record passed/failed/skipped/unrun separately; empty files
 and stub-return tests are not physics evidence. Replace Warden's unavailable
 assertion only when implemented, retaining period's while it is still empty.
 
-Count files before additions/review. Document preparation had 41 upload files; implementation now has 51, all
+Count files before additions/review. Document preparation had 41 upload files; implementation now has 54, all
 flat. The new files are calibration.js, security.js, later-level.js,
 test_calibration.mjs, test_security.mjs, test_later_integration.mjs and
 test_qft.py. The selector adds stage-select.js, test_stage_select.mjs and
-test_ui.mjs. AGENTS and dependency requirements remain unchanged.
+test_ui.mjs. Stage 4–5 adds quantum-radio.js, radio-level.js and test_radio.mjs,
+reusing the existing integration/browser test files. AGENTS and dependency requirements remain unchanged.
 
 H01: hosted Qollab selected local simulator, imports/actual async bridge,
 conversion, repeated trials and errors. H02: local automated Chromium flows
@@ -389,6 +465,7 @@ cannot complete them, and hardware submission requires separate authorization.
 | Preparation after document edits, 2026-10-10 | 39 passed | 31 passed | 1 passed | Same three commands, all exit 0; zero failures/skips. |
 | Implementation Q14, 2026-10-10 | 59 passed | 45 passed | 4 passed | Current registered commands, all exit 0; zero failures/skips. |
 | Four-trial rule and selector, 2026-10-11 | 61 passed | 49 passed | 4 passed | Also 1 Chromium browser test passed; all exit 0, zero failures/skips. |
+| Stage 4–5 final, 2026-10-11 | 69 passed | 59 passed | 6 passed | Also 4 Chromium tests; 138 total, all exit 0, zero failures/skips. |
 
 Document-preparation post-edit execution used `source .venv/bin/activate && python -m unittest
 discover -v`, `npm test` and `npm run test:integration` from the repository

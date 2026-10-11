@@ -13,7 +13,7 @@ from statistics import fmean
 from bell import correlation_statistics, measure_bell, preparation_fidelity
 from teleport import teleport, prepare_calibration, finish_calibration, cancel_calibration
 from warden import measure_link, open_link, close_link
-from qft import measure_periodic
+from qft import measure_periodic, open_radio, measure_radio, commit_radio, verify_radio, discard_radio, close_radio
 
 __all__ = [
     "bell_experiment",
@@ -23,6 +23,7 @@ __all__ = [
     "teleport_prepare", "teleport_finish", "teleport_cancel",
     "warden_open", "warden_close",
     "qft_experiment",
+    "radio_open", "radio_measure", "radio_commit", "radio_verify", "radio_discard", "radio_close",
 ]
 
 
@@ -147,3 +148,27 @@ def teleport_cancel(trial_id):
 def qft_experiment(config, shots, *, backend=None, seed=None):
     """Small periodic-state Fourier data; not a factoring experiment."""
     return measure_periodic(_decode_config(config), shots, backend=backend, seed=seed)
+
+
+def radio_open(mode, *, scenario=None, seed=None):
+    return open_radio(mode, scenario=scenario, seed=seed)
+
+
+def radio_measure(scenario_id, predictions, shots, *, backend=None, seed=None):
+    return measure_radio(scenario_id, _decode_config(predictions), shots, backend=backend, seed=seed)
+
+
+def radio_commit(trial_id, observations, phases):
+    return commit_radio(trial_id, observations, phases)
+
+
+def radio_verify(trial_id, bob_period=None):
+    return verify_radio(trial_id, bob_period)
+
+
+def radio_discard(trial_id):
+    return discard_radio(trial_id)
+
+
+def radio_close(scenario_id):
+    return close_radio(scenario_id)

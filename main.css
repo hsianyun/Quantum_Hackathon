@@ -144,6 +144,16 @@ select { margin-bottom: 14px; }
 .level-selector label { color: #c7d2db; font-size: 12px; }
 .level-selector select { width: min(100%, 350px); margin: 0; }
 .level-selector .field-hint { flex-basis: 100%; margin: 0; }
+.radio-pattern { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin: 18px 0; }
+.radio-pattern span { padding: 8px 0; text-align: center; background: #0b141c; border: 1px solid #33424f; color: #8b9ba8; font-size: 12px; }
+.radio-pattern .has-amplitude { background: #254f4b; color: #b8f9eb; border-color: #72c9bd; }
+.radio-plot { width: 100%; max-width: 100%; overflow-x: auto; padding: 12px 0; }
+.radio-histogram { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; min-width: 480px; }
+.radio-bin { text-align: center; font-family: var(--mono); font-size: 9px; }
+.radio-track { height: 120px; display: flex; align-items: end; border-bottom: 1px solid #526473; margin: 6px 0; }
+.radio-track i { display: block; width: 100%; background: #70c9c3; min-height: 1px; }
+.radio-bin.is-peak .radio-track { border-bottom: 3px solid var(--amber); }
+.radio-bin.is-peak > span:last-child { color: var(--amber); }
 .message-compose { display: flex; gap: 9px; margin-bottom: 8px; }
 .message-compose input { min-width: 0; font-family: var(--mono); letter-spacing: 2px; }
 .small-button { border: 1px solid #527c7c; background: #213c40; color: #c5eeea; padding: 9px 15px; white-space: nowrap; }

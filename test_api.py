@@ -210,6 +210,20 @@ class ApiTests(unittest.TestCase):
             qft_experiment('{"num_qubits": 4, "period": 3}', 8, backend=backend)
         backend.run.assert_not_called()
 
+    def test_radio_json_bridge_preserves_selected_backend_and_hides_scenario(self):
+        from api import radio_open, radio_measure, radio_verify, radio_close
+        opened = radio_open("guided", scenario=4)
+        try:
+            data = radio_measure(opened["scenario_id"], '{"alice_period": 4, "bob_spacing": 4}',
+                                 4096, backend=BasicSimulator(seed_simulator=42))
+            self.assert_json_roundtrip(data)
+            self.assertNotIn("period", data)
+            result = radio_verify(data["trial_id"])
+            self.assert_json_roundtrip(result)
+            self.assertEqual(result["period"], 4)
+        finally:
+            radio_close(opened["scenario_id"])
+
     def test_warden_wrapper_preserves_real_physics_and_hidden_link(self):
         from api import warden_open, warden_close
         link = warden_open(scenario="z")

@@ -1,8 +1,9 @@
 # Split Vault
 
 A two-player asymmetric quantum escape-room game. The quantum core uses
-real Qiskit circuits for Bell Lock, Teleportation Calibration, Warden and
-small QFT utilities. The playable progression stops after Warden.
+real Qiskit circuits for Bell Lock, Teleportation Calibration, Warden,
+Quantum Radio and Hidden Period. All five stages are playable and directly
+selectable; completing Warden unlocks advancement to Quantum Radio, then Hidden Period.
 Bell Lock uses the simulator or QPU selected in Qollab. Python callers can
 also run ideal statevector experiments locally, without a separate Aer installation.
 
@@ -14,6 +15,7 @@ root-level files to Qollab. Do not upload `.git`, `.venv`, `.uv-cache`, or
 generated `__pycache__` directories.
 
 The project is limited to **90 project files**, as required by `AGENTS.md`.
+The Stage 4–5 implementation contains 54 flat upload files.
 Qollab automatically loads root-level `main.css`. All interface styles live
 directly in that file, and `index.html` links to it for local preview as well.
 Python imports now use `from bell import ...`, `from teleport import ...`,
@@ -142,7 +144,7 @@ print(json.dumps(teleport_experiment(1.1, 0.7, "Z", 16)))
   calibration protocol. `qft_experiment` exposes small Fourier utilities.
   See the current API contracts and verification evidence in `VERIFY.md`.
 
-Warden and QFT configs accept Python dictionaries or JSON object text.
+Warden/QFT configs and radio predictions accept Python dictionaries or JSON object text.
 Their JavaScript adapters use `JSON.stringify(config)` because the Python
 bridge may otherwise expose a JavaScript object as a JsProxy rather than a
 dictionary. Update both `quantum-client.js` and `api.py` together in Qollab.
@@ -187,7 +189,7 @@ Run the lightweight JavaScript tests with Node's built-in test runner (no
 dependencies or installation step required):
 
 ```sh
-node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs test_calibration.mjs test_security.mjs test_stage_select.mjs
+node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs test_calibration.mjs test_security.mjs test_stage_select.mjs test_radio.mjs
 # Or, with npm available: npm test
 ```
 
@@ -260,7 +262,7 @@ Verification commands:
 
 ```sh
 python -m unittest discover -v
-node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs test_calibration.mjs test_security.mjs
+npm test
 ```
 
 The original foundation had 39 Python and 31 JavaScript unit tests. Current
@@ -342,7 +344,60 @@ Optional local browser check: `npm run test:browser` uses installed Chromium
 JS in a headless browser with a test-only Python bridge fixture, without a
 server. Real quantum execution is covered separately by integration tests.
 
-## Small QFT utilities (no new gameplay)
+## Quantum Radio and Hidden Period
+
+Stage 4 uses a four-qubit register, N=16, with a Python-selected input period
+2 or 4. Alice sees equal-amplitude computational locations, commits a period
+hypothesis and sends one bit (2=0, 4=1). Bob receives that hypothesis and commits
+a Fourier peak-spacing prediction. Both commit before the selected backend
+executes a real state-preparation/forward-QFT/measurement circuit. The output
+histogram and measured spacing markers then test both predictions.
+
+Stage 5 keeps a period from 2/4/8 private in Python. Alice measures and sees raw
+q3q2q1q0 counts, with q0 least significant. She manually enters every populated
+integer readout and its y/16 phase fraction, in matching order. Python commits
+these claims without checking/revealing their correctness yet. Alice transmits
+only the fractions, encoded as four bits per fraction. Bob receives those
+fractions, infers a period and commits before verification. Wrong interpretations
+or guesses receive bit-order/phase/spacing diagnostics. The correct period and
+verified markers appear only when both roles and the measured spectrum agree.
+
+Each accepted batch costs one existing source credit for 4,096 fresh shots;
+first entry grants 12 credits and 32/128 classical bits for Stage 4/5. Prior
+legitimate transmissions retain their cost if a later backend call fails; a
+failed call adds no debit. Retry verification with the same committed trial
+without submitting another quantum job. New trials retain spending; checkpoint
+reset restores the budget, clears trial evidence and keeps the same scenario,
+notebook discoveries and earned fragment. An explicit replacement closes the
+old scenario. Each stage awards at most one fragment. Explanations unlock after
+success; the blind explanation reseals when starting a new trial.
+
+Both stages use `quantum-radio.js` for game rules, `radio-level.js` for views,
+the existing notebook/resources and `quantum-client.js` for the async Qollab
+bridge. Shared-device room separation is educational; state lives in the tab.
+Use a local simulator for repeated trials. IonQ permits one job per Run;
+verification needs no additional job, but another measurement needs another Run.
+Hosted Qollab import/conversion, manual keyboard/mobile and hardware checks are
+still HUMAN_CHECK in TASKS/VERIFY.
+
+The additive `api.py` protocol is:
+
+| Function | Boundary |
+| --- | --- |
+| `radio_open(mode, *, scenario=None, seed=None)` | Guided/blind opaque scenario; guided amplitude locations only. Diagnostic scenario override stays in Python. |
+| `radio_measure(scenario_id, predictions, shots, *, backend=None, seed=None)` | Guided committed predictions or blind empty dictionary; sanitized raw counts and trial handle. JS sends predictions as JSON text and forwards the selected backend. |
+| `radio_commit(trial_id, observations, phases)` | Blind comma-separated integer/fraction claims; canonical fractions and binary payload, without hidden answer/correctness. |
+| `radio_verify(trial_id, bob_period=None)` | Guided stored predictions or blind committed candidate; scientific checks/diagnostic, period only on full success. |
+| `radio_discard(trial_id)` / `radio_close(scenario_id)` | Idempotent trial/scenario cleanup. |
+
+Python bounds scenarios to 32, one retained trial each, with 30-minute expiry.
+Same interpretation/verification retries are idempotent; revisions require a
+new trial or reset. The acceptance gate requires >=95% expected-peak mass,
+every clean expected peak observed and sampled dominant support matching it.
+No noisy-device certification or continued-fraction cases are claimed.
+Stage 6 / Circuit Architect is the recommended next task and remains deferred.
+
+## Small QFT utilities
 
 Python callers can run `qft_experiment({"num_qubits": 4, "period": 4}, 4096)`
 from `api`. r=4 gives measured peaks at 0,4,8,12; r=2 gives 0,8. Registers are
@@ -360,6 +415,7 @@ const runQft = createQftExperiment(qft_experiment, backend);
 const spectrum = await runQft({ config: { num_qubits: 4, period: 2 }, shots: 4096 });
 ```
 
-This is an API utility, not a new Quantum Radio level or N=15 factoring claim.
-Circuit Architect, period finding, Final Vault and networking remain deferred.
+This diagnostic utility exposes its caller-supplied period; the playable radio
+protocol above keeps hidden scenarios private. Circuit Architect, N=15 period
+finding, Final Vault and networking remain deferred.
 Read AGENTS.md, WORKFLOW.md, TASKS.md and VERIFY.md for the reviewed boundary.

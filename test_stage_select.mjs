@@ -48,8 +48,19 @@ test("switching preserves each stage's choices, link and spending while sharing 
 
 test("pending experiments, unsupported stages and mismatched sessions cannot switch", () => {
   const store = createStageStore();
-  for (const target of [0, 4, "2", NaN]) assert.throws(() => selectStage(store, store.sessions[1], target));
+  for (const target of [0, 6, "2", NaN]) assert.throws(() => selectStage(store, store.sessions[1], target));
   assert.throws(() => selectStage(store, { ...store.sessions[1], running: true }, 3), /pending/);
   assert.throws(() => selectStage(store, { ...store.sessions[1], game: { ...store.sessions[1].game, currentLevel: 3 } }, 2), /match/);
   assert.equal(store.current, 1);
+});
+test("radio stages are directly selectable and preserve separate evidence, budgets and shared discoveries", () => {
+  let store = createStageStore();
+  store = selectStage(store, store.sessions[1], 5);
+  assert.equal(store.sessions[5].mode, "blind"); assert.equal(store.sessions[5].game.classicalBits, 128);
+  const blind = { ...store.sessions[5], observations_text: "0,4,8,12", phases_text: "0,1/4,1/2,3/4", notes: addNote([], "Manual radio discovery") };
+  store = selectStage(store, blind, 4);
+  assert.equal(store.sessions[4].mode, "guided"); assert.equal(store.sessions[4].game.classicalBits, 32);
+  store = selectStage(store, store.sessions[4], 5);
+  assert.equal(store.sessions[5].observations_text, blind.observations_text);
+  assert.equal(store.sessions[5].notes[0].text, "Manual radio discovery");
 });

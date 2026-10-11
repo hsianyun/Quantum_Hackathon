@@ -65,3 +65,17 @@ export function createQftExperiment(experiment, backend) {
     return callPython(experiment, [JSON.stringify(config), shots], { backend });
   };
 }
+
+export function createRadioExperiments(open, measure, commit, verify, discard, close, backend) {
+  return {
+    open: mode => callPython(open, [mode]),
+    measure: ({ scenario_id, predictions, shots }) => {
+      if (!backend) return Promise.reject(new Error("Choose a local simulator in Qollab's Run dialog."));
+      return callPython(measure, [scenario_id, JSON.stringify(predictions), shots], { backend });
+    },
+    commit: (trial_id, observations, phases) => callPython(commit, [trial_id, observations, phases]),
+    verify: (trial_id, bob_period) => callPython(verify, bob_period === undefined ? [trial_id] : [trial_id, bob_period]),
+    discard: trial_id => callPython(discard, [trial_id]),
+    close: scenario_id => callPython(close, [scenario_id]),
+  };
+}

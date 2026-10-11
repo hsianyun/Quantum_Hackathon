@@ -1,9 +1,10 @@
 import { chooseGate, commitAlice, chooseBasis, choosePrediction, commitBob,
   beginExperiment, experimentRequest, finishExperiment, failExperiment, readyToRun,
   nextTrial, restartLevel, sendMessage, TRIAL_PAIRS } from "./level-one.js";
-import { bell_experiment, teleport_prepare, teleport_finish, teleport_cancel, warden_open, warden_experiment, warden_close } from "api";
-import { createBellExperiment, createCalibrationExperiments, createSecurityExperiments } from "./quantum-client.js";
+import { bell_experiment, teleport_prepare, teleport_finish, teleport_cancel, warden_open, warden_experiment, warden_close, radio_open, radio_measure, radio_commit, radio_verify, radio_discard, radio_close } from "api";
+import { createBellExperiment, createCalibrationExperiments, createSecurityExperiments, createRadioExperiments } from "./quantum-client.js";
 import { mountCalibration, mountSecurity } from "./later-level.js";
+import { mountRadio } from "./radio-level.js";
 import { createStageStore, selectStage } from "./stage-select.js";
 import { addNote } from "./notebook.js";
 import { renderAlice } from "./alice.js";
@@ -154,13 +155,17 @@ function switchLevel(target) {
       later = mountCalibration(navigation.sessions[2],
         createCalibrationExperiments(teleport_prepare, teleport_finish, teleport_cancel, backend),
         () => switchLevel(3), onBusy);
-    } else {
+    } else if (target === 3) {
       later = mountSecurity(navigation.sessions[3],
-        createSecurityExperiments(warden_open, warden_experiment, warden_close, backend), onBusy);
+        createSecurityExperiments(warden_open, warden_experiment, warden_close, backend), onBusy, () => switchLevel(4));
+    } else {
+      later = mountRadio(navigation.sessions[target],
+        createRadioExperiments(radio_open, radio_measure, radio_commit, radio_verify, radio_discard, radio_close, backend), onBusy,
+        target === 4 ? () => switchLevel(5) : null);
     }
-    const name = ["Bell Lock", "Teleportation Calibration", "Warden"][target - 1];
+    const name = ["Bell Lock", "Teleportation Calibration", "Warden", "Quantum Radio", "Hidden Period"][target - 1];
     document.title = `Split Vault | ${name}`;
-    document.querySelector(".skip-link").href = ["#rooms", "#cal-state", "#sec-open"][target - 1];
+    document.querySelector(".skip-link").href = ["#rooms", "#cal-state", "#sec-open", "#fourier-open", "#fourier-open"][target - 1];
     announce(`Stage ${target}: ${name}. Progress and notes saved; resume or reset this stage to explore.`);
   } catch (error) {
     byId("level-select").value = String(navigation.current);

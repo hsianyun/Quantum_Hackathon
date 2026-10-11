@@ -46,7 +46,39 @@ export const bell_experiment = proxy(([basis_a, basis_b, shots], kwargs) => ({
   preparation_fidelity_source: "ideal_circuit", agreement: 1,
   correlation: 1, correlation_type: "correlated",
   counts: { "00": shots / 2, "01": 0, "10": 0, "11": shots / 2 }
-}));`;
+}));
+const radioTrials = new Map(); let radioMode;
+export const radio_open = proxy(([mode]) => { radioMode = mode; return { experiment: "radio", status: "ok", mode,
+  scenario_id: "c".repeat(32), num_qubits: 4, register_size: 16,
+  bit_order: "q3q2q1q0", transform_sign: "positive", ...(mode === "guided" ? {input_positions: [0,4,8,12]} : {}) }; });
+export const radio_measure = proxy(([scenario_id, text, shots], kwargs) => {
+  if (typeof text !== "string" || kwargs.backend !== globalThis.backend) throw new Error("Invalid radio bridge");
+  const trial_id = (++sequence).toString(16).padStart(32, "0");
+  radioTrials.set(trial_id, { ...JSON.parse(text), mode: radioMode });
+  return { experiment: "radio", status: "ok", mode: radioMode, scenario_id, trial_id,
+    num_qubits: 4, register_size: 16, bit_order: "q3q2q1q0", shots,
+    counts: Object.fromEntries(Array.from({length:16}, (_,y) => [y.toString(2).padStart(4,"0"), y%4===0 ? shots/4 : 0])) };
+});
+export const radio_verify = proxy(([trial_id, candidate]) => {
+  if (globalThis.failRadioVerify) { globalThis.failRadioVerify = false; throw new Error("Verification transport interrupted"); }
+  const predictions = radioTrials.get(trial_id);
+  const blind = predictions.mode === "blind";
+  const alice_matches = blind ? predictions.claims?.observations.join() === "0,4,8,12" && predictions.claims.phases.join() === "0,1/4,1/2,3/4" : predictions.alice_period === 4;
+  const bob_matches = blind ? candidate === 4 : predictions.bob_spacing === 4;
+  return { experiment: "radio", status: "ok", trial_id, alice_matches, bob_matches,
+    spectrum_consistent: true, ...(!blind || alice_matches && bob_matches ? {observed_peaks: [0,4,8,12], observed_spacing: 4} : {}),
+    diagnostic: blind ? "Your proposed period's phase pattern does not match all observed peaks." : "Compare your input spacing and the measured interference spectrum.",
+    ...(alice_matches && bob_matches ? {period:4} : {}) };
+});
+export const radio_commit = proxy(([trial_id, integers, fractions]) => {
+  const observations = integers.split(",").map(Number);
+  const phases = fractions.split(",");
+  const payload = phases.map(phase => { const [a,b=1] = phase.split("/").map(Number); return (a/b*16).toString(2).padStart(4,"0"); }).join("");
+  radioTrials.get(trial_id).claims = {observations, phases, payload};
+  return {experiment:"radio",status:"ok",trial_id,observations,phases,payload};
+});
+export const radio_discard = proxy(([id]) => ({ status: "ok", discarded: radioTrials.delete(id) }));
+export const radio_close = proxy(() => ({ status: "ok", closed: true }));`;
 
 async function browser(t) {
   const root = fileURLToPath(new URL(".", import.meta.url));
@@ -218,5 +250,124 @@ test("browser: direct stage selection, four-trial recovery, saved progress and p
   await select(3);
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true,
     "Warden fits a mobile viewport after selecting it");
+  assert.deepEqual(errors, []);
+});
+
+test("browser: guided radio hides output until commitments and renders measured markers/rewards", { skip: !available, timeout: 30000 }, async t => {
+  const { evaluate, wait, errors, viewport } = await browser(t);
+  await evaluate('document.getElementById("level-select").value="4"; document.getElementById("level-select").dispatchEvent(new Event("change")); document.getElementById("fourier-open").click();');
+  await wait('!document.getElementById("fourier-alice").disabled');
+  assert.equal(await evaluate('document.querySelectorAll("#fourier-pattern .has-amplitude").length'), 4);
+  assert.equal(await evaluate('document.querySelectorAll("#fourier-spectrum .radio-bin").length'), 0);
+  assert.equal(await evaluate('document.getElementById("fourier-why").disabled'), true);
+  assert.equal(await evaluate('document.getElementById("fourier-bob").disabled'), true);
+  async function play(period, spacing) {
+    await evaluate(`document.getElementById("fourier-alice").value="${period}"; document.getElementById("fourier-alice-commit").click(); document.getElementById("fourier-send").click(); document.getElementById("fourier-bob").value="${spacing}"; document.getElementById("fourier-bob-commit").click(); document.getElementById("fourier-run").click();`);
+    try { await wait('!document.getElementById("fourier-result").hidden && !document.getElementById("level-select").disabled'); }
+    catch (error) { throw new Error(`${error.message}: ${await evaluate('document.getElementById("system-message").textContent')}`); }
+  }
+  await play(2, 8);
+  assert.equal(await evaluate('document.getElementById("fragments").textContent'), "00");
+  assert.equal(await evaluate('document.getElementById("bell-pairs").textContent'), "11");
+  assert.equal(await evaluate('document.getElementById("fourier-why").disabled'), true);
+  await evaluate('document.getElementById("fourier-next").click()');
+  await wait('!document.getElementById("fourier-alice").disabled');
+  await play(4, 4);
+  assert.equal(await evaluate('document.getElementById("fragments").textContent'), "01");
+  assert.equal(await evaluate('document.querySelectorAll("#fourier-spectrum .radio-bin.is-peak").length'), 4);
+  await evaluate('document.getElementById("fourier-why").click()');
+  assert.match(await evaluate('document.getElementById("fourier-explanation").textContent'), /N\/r/);
+  await evaluate('document.getElementById("fourier-advance").click()');
+  await wait('document.getElementById("level-select").value === "5"');
+  await evaluate('document.getElementById("level-select").value="4"; document.getElementById("level-select").dispatchEvent(new Event("change"));');
+  await viewport(390, 844);
+  assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
+  await evaluate('document.getElementById("fourier-reset").click()');
+  await wait('!document.getElementById("fourier-alice").disabled');
+  assert.equal(await evaluate('document.getElementById("fragments").textContent'), "01");
+  assert.equal(await evaluate('document.getElementById("bell-pairs").textContent'), "12");
+  assert.deepEqual(errors, []);
+});
+
+test("browser: hidden period requires manual decoding, phase-only exchange, commitment and retry; mobile and discoveries survive", { skip: !available, timeout: 30000 }, async t => {
+  const { evaluate, wait, errors, viewport } = await browser(t);
+  await evaluate('document.getElementById("level-select").value="5"; document.getElementById("level-select").dispatchEvent(new Event("change")); document.getElementById("fourier-open").click();');
+  await wait('!document.getElementById("fourier-run").disabled');
+  assert.equal(await evaluate('document.getElementById("fourier-pattern")'), null);
+  assert.equal(await evaluate('document.getElementById("fourier-bob").disabled'), true);
+  assert.equal(await evaluate('document.getElementById("fourier-why").disabled'), true);
+  async function sample() {
+    await evaluate('document.getElementById("fourier-run").click()');
+    await wait('!document.getElementById("fourier-observations").disabled');
+  }
+  async function interpret() {
+    await evaluate('document.getElementById("fourier-observations").value="0,4,8,12"; document.getElementById("fourier-phases").value="0,1/4,1/2,3/4"; document.getElementById("fourier-alice-commit").click();');
+    await wait('!document.getElementById("fourier-send").disabled');
+    await evaluate('document.getElementById("fourier-send").click()');
+  }
+  async function infer(candidate, fail = false) {
+    await evaluate(`document.getElementById("fourier-bob").value="${candidate}"; document.getElementById("fourier-bob-commit").click(); ${fail ? "globalThis.failRadioVerify = true;" : ""} document.getElementById("fourier-verify").click();`);
+    await wait('!document.getElementById("level-select").disabled');
+  }
+  await sample();
+  assert.equal(await evaluate('document.querySelectorAll(".alice-room .radio-bin").length'), 16);
+  assert.equal(await evaluate('document.querySelectorAll(".bob-room .radio-bin").length'), 0);
+  assert.match(await evaluate('document.getElementById("fourier-spectrum").textContent'), /0100/);
+  assert.equal(await evaluate('document.getElementById("fourier-observations").value'), "");
+  // Uncommitted manual discoveries and raw measurement survive navigation.
+  await evaluate('document.getElementById("fourier-observations").value="0,4,8,12"; document.getElementById("level-select").value="2"; document.getElementById("level-select").dispatchEvent(new Event("change")); document.getElementById("level-select").value="5"; document.getElementById("level-select").dispatchEvent(new Event("change"));');
+  assert.equal(await evaluate('document.getElementById("fourier-observations").value'), "0,4,8,12");
+  assert.equal(await evaluate('document.getElementById("bell-pairs").textContent'), "11");
+  await interpret();
+  assert.match(await evaluate('document.getElementById("fourier-received").textContent'), /0, 1\/4, 1\/2, 3\/4/);
+  assert.equal(await evaluate('document.getElementById("classical-bits").textContent'), "112");
+  await infer(2);
+  assert.equal(await evaluate('document.getElementById("fragments").textContent'), "00");
+  assert.equal(await evaluate('document.querySelectorAll(".radio-bin.is-peak").length'), 0);
+  assert.equal(await evaluate('document.getElementById("fourier-why").disabled'), true);
+  assert.doesNotMatch(await evaluate('document.getElementById("fourier-diagnostic").textContent'), /period 4 confirmed/);
+  await evaluate('document.getElementById("fourier-reset").click()');
+  await wait('!document.getElementById("fourier-run").disabled');
+  assert.equal(await evaluate('document.getElementById("classical-bits").textContent'), "128");
+  await sample(); await interpret(); await infer(4, true);
+  assert.equal(await evaluate('document.getElementById("fourier-bob").disabled'), true);
+  assert.equal(await evaluate('document.getElementById("bell-pairs").textContent'), "11");
+  assert.equal(await evaluate('document.getElementById("fragments").textContent'), "00");
+  await evaluate('document.getElementById("fourier-verify").click()');
+  await wait('!document.getElementById("fourier-result").hidden');
+  assert.equal(await evaluate('document.getElementById("fragments").textContent'), "01");
+  assert.equal(await evaluate('document.getElementById("bell-pairs").textContent'), "11");
+  assert.match(await evaluate('document.getElementById("fourier-diagnostic").textContent'), /period 4 confirmed/);
+  await evaluate('document.getElementById("fourier-why").click()');
+  assert.match(await evaluate('document.getElementById("fourier-explanation").textContent'), /y\/16/);
+  await viewport(390, 844);
+  assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
+  await evaluate('document.getElementById("fourier-reset").click()');
+  await wait('!document.getElementById("fourier-run").disabled');
+  assert.equal(await evaluate('document.getElementById("fragments").textContent'), "01");
+  assert.equal(await evaluate('document.getElementById("fourier-why").disabled'), true);
+  await evaluate('document.getElementById("open-notebook").click()');
+  assert.match(await evaluate('document.getElementById("notes").textContent'), /Hidden Period/);
+  assert.deepEqual(errors, []);
+});
+
+test("browser: Warden advancement remains locked until complementary evidence completes the stage", { skip: !available, timeout: 30000 }, async t => {
+  const { evaluate, wait, errors } = await browser(t);
+  await evaluate('document.getElementById("level-select").value="3"; document.getElementById("level-select").dispatchEvent(new Event("change")); document.getElementById("sec-open").click();');
+  await wait('!document.getElementById("sec-alice-commit").disabled');
+  assert.equal(await evaluate('document.getElementById("sec-advance").hidden'), true);
+  for (const basis of ["Z", "X"]) {
+    await evaluate(`document.getElementById("sec-alice-basis").value="${basis}"; document.getElementById("sec-allocation").value="1"; document.getElementById("sec-alice-commit").click(); document.getElementById("sec-bob-basis").value="${basis}"; document.getElementById("sec-bob-commit").click(); document.getElementById("sec-run").click();`);
+    await wait('!document.getElementById("sec-alice-send").disabled');
+    await evaluate(`document.getElementById("sec-alice-send").click(); document.getElementById("sec-bob-send").click(); document.getElementById("sec-decision").value="${basis === "Z" ? "insufficient" : "trust"}"; document.getElementById("sec-judge").click();`);
+    if (basis === "Z") {
+      assert.equal(await evaluate('document.getElementById("sec-advance").hidden'), true);
+      await evaluate('document.getElementById("sec-next").click()');
+    }
+  }
+  assert.equal(await evaluate('document.getElementById("fragments").textContent'), "01");
+  await evaluate('document.getElementById("sec-advance").click()');
+  await wait('document.getElementById("level-select").value === "4"');
+  assert.equal(await evaluate('document.getElementById("fourier-open").disabled'), false);
   assert.deepEqual(errors, []);
 });

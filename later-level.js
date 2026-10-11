@@ -17,7 +17,7 @@ export function renderShared(s) {
   byId("message-form").querySelector("button").disabled = s.game.classicalBits === 0;
 }
 
-export function mountSecurity(initialSession, api, onBusy = () => {}) {
+export function mountSecurity(initialSession, api, onBusy = () => {}, onComplete = null) {
   let s = initialSession;
   let busy = false;
   let disposed = false;
@@ -52,7 +52,8 @@ export function mountSecurity(initialSession, api, onBusy = () => {}) {
     <button id="sec-run" class="run-button" type="button">Run committed security test</button>
     <section id="sec-result" class="verification" hidden><h2 id="sec-result-title" tabindex="-1">Link judgment</h2><p id="sec-result-text"></p></section>
     <button id="sec-next" class="small-button" type="button">New security test</button>
-    <p id="sec-completion" class="completion-banner" role="status" hidden></p>`;
+    <p id="sec-completion" class="completion-banner" role="status" hidden></p>
+    <button id="sec-advance" class="small-button" type="button" hidden>Continue to Quantum Radio</button>`;
   function render() {
     if (disposed) return;
     onBusy(busy || s.running);
@@ -82,7 +83,9 @@ export function mountSecurity(initialSession, api, onBusy = () => {}) {
     byId("sec-result").hidden = !s.result;
     byId("sec-result-text").textContent = s.result ? `You chose ${s.result.decision}; ${s.result.correct ? "supported" : "not supported"} by the available evidence. ${s.result.explanation}` : "";
     byId("sec-completion").hidden = !s.completed;
-    byId("sec-completion").textContent = `Warden complete. One fragment secured; ${s.game.bellPairs} source credits retained for later messaging. This run stops before later gameplay. You may continue testing this link.`;
+    byId("sec-completion").textContent = `Warden complete. One fragment secured; ${s.game.bellPairs} source credits retained for later messaging. You may continue testing or advance to Quantum Radio.`;
+    byId("sec-advance").hidden = !s.completed || !onComplete;
+    byId("sec-advance").disabled = busy || s.running;
   }
   async function act(action) {
     if (busy) return;
@@ -130,6 +133,7 @@ export function mountSecurity(initialSession, api, onBusy = () => {}) {
     for (const id of ["sec-alice-basis", "sec-bob-basis", "sec-allocation"]) byId(id).value = "";
   }));
   render();
+  byId("sec-advance").addEventListener("click", () => act(() => onComplete?.(s)));
   return {
     snapshot: () => s.phase !== "choice" ? s : { ...s,
       bases: { alice: s.committed.alice ? s.bases.alice : byId("sec-alice-basis").value || null,

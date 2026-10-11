@@ -1,13 +1,75 @@
 # Split Vault dependency-aware tasks
 
+## Authorized Stage 4–5 run (2026-10-11)
+
+The user's pasted request supersedes the former Q14 stop for Quantum Radio and
+Hidden Period only. Stop after S59; Stage 6/Circuit Architect and later work stay
+deferred. Baseline at 1dbb00f: 61 Python, 49 JS unit, 4 real-Qiskit integration,
+1 Chromium test passed, zero failures/skips; 51 flat upload files.
+
+| ID / status | Dependencies | Gate |
+| --- | --- | --- |
+| S40 COMPLETE | Q14 | Inspect current APIs, sources/tests, baseline and feature contracts below. |
+| S41 COMPLETE | S40 | Reuse QFT core; private bounded radio scenarios, sanitized measurement and committed Python interpretation/verification APIs. |
+| S42 COMPLETE | S41 | Exact r=2/4/8 spectra, expected peaks, ordering, actual selected backend, finite JSON, secrecy, errors/lifecycle tests and full regression. |
+| S43 COMPLETE | S42 | Stage 4 pure game, Alice/Bob views, exchange, histogram/markers, selector and Warden advancement. |
+| S44 COMPLETE | S43 | Stage 4 real-Qiskit integration, browser paths, wrong hypotheses and full regression. |
+| S50 COMPLETE | S44 | Stage 5 pure interpretation/exchange/inference game; Python owns the hidden period. |
+| S51 COMPLETE | S50 | Stage 5 asymmetric views, notebook prompts, locked explanations and selector/advancement. |
+| S52 COMPLETE | S51 | Correct/wrong periods, bit/phase interpretation, privacy/resources/retry/reset, real integration/browser and full regression. |
+| S59 COMPLETE | S52 | Qiskit/game/software review; docs/results/file count; STOP. |
+
+Stage 4 contract: four-qubit equal periodic state; forward positive-sign QFT
+with final swaps, q0 least significant, displayed q3q2q1q0. Python chooses r=2
+or 4. Alice sees amplitude locations, never a period label, commits r and sends
+one bit (2=0, 4=1). Bob sees only her transmitted hypothesis and N=16, commits
+peak spacing 2/4/8. Both commit before measurement/histogram. One successful
+device batch costs one credit, 4096 independent shots. Verification checks
+Alice's r, Bob's N/r, and actual sampled support: >=95% expected-peak mass,
+all expected peaks observed, dominant peaks match the clean support. Wrong
+predictions explain inconsistent spacing/interference after commitment.
+Python computes peaks/checks; JS awards one fragment only when all checks pass.
+Explanation stays locked until completion; advancement opens Stage 5. First
+entry allocates 12 credits/32 classical bits. Prior legitimate transmission
+cost is preserved on a later backend error; errors add no debit or disclosure.
+
+Stage 5 contract: hidden r=2/4/8, N=16, retained Python scenario; no input pattern,
+period/offset/expected peaks in pre-commit responses. One successful measurement
+costs one credit/4096 shots and gives Alice raw q3q2q1q0 counts only. She enters
+integer peak outcomes and phase fractions, commits them in Python, then sends
+only her claimed phases. Python encodes each phase as a four-bit numerator over
+16; cost is 4 bits per observation (max 32). Bob initially sees neither pattern
+nor histogram, receives Alice's fractions, commits r=2/4/8, then Python compares
+the claims to sampled dominant readouts and the private scenario. Wrong guesses
+give candidate-specific spacing/phase diagnostics without stating the correct
+period. Only a fully correct interpretation/inference/spectrum reveals that
+period and unlocks explanation. First entry allocates 12 credits/128 bits.
+
+Both contracts reuse existing resources/notebook/reset/selector/async bridge;
+Bob-to-Alice messaging is not required and cannot substitute for commitments.
+Same-trial commits/verification are idempotent and immutable; handles are bounded
+and expire after 30 minutes. Reset restores budget/retains notes/reward and the
+same scenario; explicit expired-scenario replacement clears old evidence. A
+valid quantum batch is charged even for a poor hypothesis; errors/stale/malformed
+replies add no debit. Failed verification can retry the committed trial without
+a new backend job. Shared-device views provide educational role separation.
+Local simulators support repeated play; IonQ allows one job per Run. Hosted
+Qollab/hardware remain HUMAN_CHECK. Planned additive API: radio_open,
+radio_measure, radio_commit, radio_verify, radio_discard, radio_close in api.py;
+JSON text for object configs/predictions, selected backend only on measurement.
+New flat files: quantum-radio.js, radio-level.js, test_radio.mjs (54 total).
+Real-Qiskit integration extends test_later_integration.mjs. Quantum gate precedes game/UI; Stage 4
+full integration/regression precedes Stage 5 game/UI. Preserve all Stage 1–3 rules.
+
 ## Execution rules
 
 Read `AGENTS.md`, `WORKFLOW.md`, this file and `VERIFY.md`. The implementation
-run authorized by the user on 2026-10-10 is complete through Q14. Stop here.
+run authorized by the user on 2026-10-10 is complete through Q14. The subsequent
+Stage 4–5 run above is complete through S59. Stop here; Stage 6 stays deferred.
 Statuses: COMPLETE = stated local acceptance verified; ACTIVE = being worked;
 TODO = pending; BLOCKED = a diagnosed prerequisite prevents progress;
 HUMAN_CHECK = actual human/platform evidence needed; DEFERRED = outside this
-run's authority. Current task status is indicated in the table; stop after Q14.
+run's authority. Current task status is indicated in the top table; stop after S59.
 
 A TODO is eligible only when every dependency is COMPLETE and scope is
 within the authorized boundary. Work in the sequence below, mark ACTIVE,
@@ -143,16 +205,16 @@ M=16 examples/peaks are in VERIFY. Independent oracles must detect a shared
 forward/inverse convention bug. Do not switch to QFT to bypass failed primary
 prerequisites. If secondary work cannot proceed safely, stop after primary.
 
-## Future progression — DEFERRED pending another review
+## Progression and remaining deferred scope
 
 Foundation/Bell Lock → Teleportation Calibration → Warden → Quantum Radio/QFT
 → Hidden Period → Circuit Architect → N=15 period finding → Final Vault.
-Overnight QFT utilities are prerequisites, not completion of Quantum Radio.
+Overnight QFT utilities were prerequisites. S40–S59 now complete both radio stages.
 
 | ID / status | Dependencies | Future scope |
 | --- | --- | --- |
-| D10 DEFERRED | Q14 | Playable Quantum Radio visuals/decoding, separate from classical radio.js, with a new both-player contract. |
-| D11 DEFERRED | D10 | Hidden Period small-register gameplay using verified utilities. |
+| D10 COMPLETE | S44 | Playable Quantum Radio: new contract, views/decoding and full local acceptance. |
+| D11 COMPLETE | S52 | Hidden Period small-register gameplay and full local acceptance. |
 | D12 DEFERRED | D11 | Full Circuit Architect recombining tested modules; architect.js is empty. |
 | D13 DEFERRED | D12, Q14 | Fixed N=15, a=2 backend/period API: classical 1,2,4,8,1 and r=4; modular counting preparation, reversible controlled oracle, inverse QFT and measurement. Empty backend makes it unsuitable for this overnight run. |
 | D14 DEFERRED | D13 | Final Vault integration/progression. |
@@ -161,14 +223,15 @@ Overnight QFT utilities are prerequisites, not completion of Quantum Radio.
 
 ## Human/platform checks
 
-No hosted/browser/hardware tooling was exercised here. Local simulations or
-proxy mocks cannot complete these checks; keep HUMAN_CHECK until evidence.
+Chromium exercises actual DOM with a test-only bridge fixture; real-Qiskit
+integration exercises the quantum path separately. Hosted/manual/hardware
+checks below still need platform evidence; keep HUMAN_CHECK until that evidence.
 They are separate from local feature completion.
 
 | ID / status | Dependencies | Required evidence |
 | --- | --- | --- |
-| H01 HUMAN_CHECK | F09; T17/W17/Q14 for relevant new features | Qollab hosted JS/Qiskit Run Project with selected local simulator: actual imports/async bridge/conversion, repeated trials, errors and new integrations. |
-| H02 HUMAN_CHECK | F06, F07; relevant new feature completion | Actual browser/mobile/keyboard/focus, hidden answers, notebook/channel/reset and navigation; Node tests do not exercise DOM. |
+| H01 HUMAN_CHECK | F09; T17/W17/Q14/S59 for relevant new features | Qollab hosted JS/Qiskit Run Project with selected local simulator: actual imports/async bridge/conversion, repeated trials, errors and new integrations. |
+| H02 HUMAN_CHECK | F06, F07; S59 | Manual keyboard/focus/mobile checks on hosted UI; local Chromium now covers DOM, privacy, notebook/reset and five-stage navigation. |
 | H03 HUMAN_CHECK | F07 | Review Bell Lock's required-exchange gap: messages optional and both rooms on one screen. Agree separately on any redesign; preserve the baseline overnight. |
 | H04 HUMAN_CHECK | F08; device-capable new features only | Actual IonQ/device behavior and one-job-per-Run limit. Statevector diagnostics do not establish calibration hardware support; no hardware job authorization in this run. |
 
@@ -359,3 +422,21 @@ per level. Normal checkpoint reset still preserves the same hidden link.
 Q14 final regression results are recorded in VERIFY: 59 Python, 45 JS unit,
 4 integration tests, all exit 0 with no failures/skips. No eligible local TODO
 remains within this run's scope. Do not begin D10–D16.
+
+S42 gate: 69 Python, 49 JS unit, 4 real-Qiskit integration and 1 Chromium test passed; all exit 0, no failures/skips. Independent Fourier sums and actual selected-backend r=2/4/8 spectra, sanitized metadata, phase/bit interpretation, errors, expiry and immutable retries verified.
+
+Stage 4 gate: 69 Python, 55 JS unit, 5 real-Qiskit integration, 2 Chromium
+tests passed, zero failures/skips. Both r=2/4, commitments, wrong spacing,
+retry/reset/rewards and desktop/mobile views verified before Stage 5 gameplay.
+
+S52/S59 final: 69 Python, 59 JS unit, 6 real-Qiskit integration, 4 Chromium
+tests passed (138 total), all exit 0, no failures/skips. Hidden r=2/4/8 correct,
+wrong inference, reversed-bit claims, immutable retries and private metadata
+verified with real Qiskit. Browser checks cover both role views, preserved
+manual drafts/discoveries, sealed answers/explanations, transport retry,
+single rewards, checkpoint resets, mobile and Warden→Radio→Hidden Period.
+Qiskit/game/software review and diff/layout checks passed; 54 flat upload files,
+three added, no dependencies or AGENTS changes. No unresolved local blocker.
+Hosted Qollab/manual device checks remain H01/H02/H04 HUMAN_CHECK. Use local
+simulators for repeated play; IonQ permits one job per Run. STOP at S59.
+Recommended next task: Stage 6 / Circuit Architect with its own contract/gates.
