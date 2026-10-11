@@ -192,6 +192,15 @@ repair to QFT's object-config adapter. Regression: 61 Python, 45 JS unit and
 4 real-Qiskit integration tests passed, zero failures/skips. Both api.py and
 quantum-client.js must be refreshed together in Qollab; hosted rerun pending.
 
+User-authorized maintenance on 2026-10-11 replaces the original 12-case
+calibration completion rule with four successful trials. Repeated states and
+random outcomes count; no branch collection or required state mix. Correct
+operation, committed correction, required exchange and fidelity threshold stay
+in force. The selector opens stages 1–3 without prerequisite completion,
+preserves each stage's budget/choices/link/evidence, shares notes and fragments,
+and locks during pending requests. Navigation alone awards no fragments.
+This does not authorize gameplay beyond Warden; see current evidence in VERIFY.
+
 Full sequence:
 `B00 → T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → W10 → W11 → W12 →
 W13 → W14 → W15 → W16 → W17`, then conditionally
@@ -222,11 +231,12 @@ deleted valid tests, fabricated answers or architecture rewrites to bypass it.
 - Correct physics: q0 input, q1 Alice Bell half, q2 Bob; CX(0,1) then H(0),
   measure q0→c0/q1→c1. First displayed bit controls Z, second controls X.
   Wrong order/omitted H physically changes the state and fails on suitable inputs.
-- Success: collect fidelity >=1-1e-9 for all four measured branches on each of
-  |0>, |+>, |+i>, using the correct operation. Each branch needs all three
-  complementary states to remove eigenstate ambiguity. One fragment once;
-  12 successful observations fit the level checkpoint's 12 source credits
-  and 24 classical bits. Calibration checkpoint grants a fresh bounded lab
+- Success (updated by user on 2026-10-11): four committed trials with fidelity
+  >=1-1e-9 using the correct operation, even if states/outcomes repeat. These
+  observations verify chosen states; they do not certify a full correction map.
+  Complementary-state comparison remains encouraged. One fragment once;
+  four successful trials cost four source credits and eight classical bits.
+  Calibration checkpoint grants a fresh bounded lab
   budget (12 credits/24 bits) on entry while preserving earned fragments;
   this is an explicit per-level allocation, not silent carry-over replenishment.
   Failed hypotheses can be retried with fair checkpoint reset.
@@ -242,7 +252,8 @@ deleted valid tests, fabricated answers or architecture rewrites to bypass it.
   noise model; reject hardware/unknown/noisy backends. Condition ideal Python
   state on the returned bits; label fidelity ideal_circuit, never tomography.
 - JS: calibration.js pure game state, quantum-client.js adapters, later-level.js
-  UI wiring using existing rooms/notebook/styles and minimal forward navigation.
+  UI wiring using existing rooms/notebook/styles. stage-select.js caches
+  stages 1–3 for direct selection and returning without resource/reward duplication.
 - Tests: all named states/branches, wrong corrections/operations, bit wiring,
   same trial/replay/cancel/expiry, real simulator forwarding, hardware/errors,
   restricted exchange/cost/retry/reset/reward, real JS→Python paths and all

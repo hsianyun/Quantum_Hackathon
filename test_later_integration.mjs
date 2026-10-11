@@ -58,29 +58,28 @@ test("calibration preserves real measured branches through exchange and recovery
   const fn = await python(t);
   const api = createCalibrationExperiments(fn("prepare"), fn("finish"), fn("cancel"), { selected: "BasicSimulator" });
   let s = c.enterCalibration({ ...createInitialState(), vaultFragments: 1 });
-  for (const state of ["0", "+", "+i"]) {
-    let attempts = 0;
-    while (["00", "01", "10", "11"].some((bits) => !s.evidence.includes(`${bits}:${state}`))) {
-      assert.ok(attempts++ < 64, "Real simulator must exercise all branches");
-      if (s.game.bellPairs === 0 || s.game.classicalBits < 2) s = c.resetCalibration(s);
-      s = c.beginMeasurement(c.chooseCalibration(s, state, "CX_H"));
-      const measurement = await api.prepare(s);
-      assert.equal("fidelity" in measurement, false);
-      s = c.receiveMeasurement(s, measurement, s.trial);
-      assert.throws(() => c.beginRecovery(s));
-      s = c.sendCalibrationMessage(s, "alice", s.alice_bits.join(""));
-      const correction = (s.alice_bits[1] ? "X" : "") + (s.alice_bits[0] ? "Z" : "") || "I";
-      s = c.beginRecovery(c.chooseCorrection(s, correction));
-      const result = await api.finish(s);
-      assert.deepEqual((await api.finish(s)), result, "Conversion retry must be idempotent");
-      s = c.receiveRecovery(s, result, s.trial);
-      assert.ok(s.result.fidelity >= 1 - 1e-9);
-      await api.cancel(s.trial_id);
-      s = c.nextCalibration(s);
-    }
+  for (const [index, state] of ["0", "+", "+i", "+i"].entries()) {
+    s = c.beginMeasurement(c.chooseCalibration(s, state, "CX_H"));
+    const measurement = await api.prepare(s);
+    assert.equal("fidelity" in measurement, false);
+    s = c.receiveMeasurement(s, measurement, s.trial);
+    assert.throws(() => c.beginRecovery(s));
+    s = c.sendCalibrationMessage(s, "alice", s.alice_bits.join(""));
+    const correction = (s.alice_bits[1] ? "X" : "") + (s.alice_bits[0] ? "Z" : "") || "I";
+    s = c.beginRecovery(c.chooseCorrection(s, correction));
+    const result = await api.finish(s);
+    assert.deepEqual((await api.finish(s)), result, "Conversion retry must be idempotent");
+    s = c.receiveRecovery(s, result, s.trial);
+    assert.ok(s.result.fidelity >= 1 - 1e-9);
+    assert.equal(s.evidence.length, index + 1);
+    assert.equal(s.completed, index === 3, "Exactly four successful trials should finish the stage");
+    await api.cancel(s.trial_id);
+    s = c.nextCalibration(s);
   }
   assert.equal(s.completed, true);
   assert.equal(s.game.vaultFragments, 2);
+  assert.equal(s.game.bellPairs, 8);
+  assert.equal(s.game.classicalBits, 16);
   s = c.resetCalibration(s);
   s = c.beginMeasurement(c.chooseCalibration(s, "+i", "CX_H"));
   s = c.receiveMeasurement(s, await api.prepare(s), s.trial);

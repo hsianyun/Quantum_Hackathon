@@ -17,9 +17,10 @@ export function renderShared(s) {
   byId("message-form").querySelector("button").disabled = s.game.classicalBits === 0;
 }
 
-export function mountSecurity(game, notes, api) {
-  let s = w.enterSecurity(game, notes);
+export function mountSecurity(initialSession, api, onBusy = () => {}) {
+  let s = initialSession;
   let busy = false;
+  let disposed = false;
   const area = byId("later-level");
   area.innerHTML = `
     <section class="mission-heading"><div><p class="eyebrow">LEVEL 03 / COMPLEMENTARY SECURITY TESTS</p>
@@ -53,6 +54,8 @@ export function mountSecurity(game, notes, api) {
     <button id="sec-next" class="small-button" type="button">New security test</button>
     <p id="sec-completion" class="completion-banner" role="status" hidden></p>`;
   function render() {
+    if (disposed) return;
+    onBusy(busy || s.running);
     renderShared(s); area.setAttribute("aria-busy", String(busy));
     byId("sec-open").disabled = busy || Boolean(s.link_id);
     byId("sec-replace").disabled = busy || !s.link_id;
@@ -83,7 +86,10 @@ export function mountSecurity(game, notes, api) {
   }
   async function act(action) {
     if (busy) return;
-    try { await action(); }
+    try {
+      const pending = action();
+      if (typeof pending?.then === "function") await pending;
+    }
     catch (error) { byId("system-message").textContent = error.message; }
     finally { busy = false; render(); }
   }
@@ -125,12 +131,18 @@ export function mountSecurity(game, notes, api) {
   }));
   render();
   return {
+    snapshot: () => s.phase !== "choice" ? s : { ...s,
+      bases: { alice: s.committed.alice ? s.bases.alice : byId("sec-alice-basis").value || null,
+        bob: s.committed.bob ? s.bases.bob : byId("sec-bob-basis").value || null },
+      allocation: s.committed.alice ? s.allocation : Number(byId("sec-allocation").value) || null },
+    isBusy: () => busy || s.running,
+    dispose: () => { disposed = true; },
     note: (text) => { s = { ...s, notes: addNote(s.notes, text) }; render(); },
     message: (role, payload) => { if (busy) throw new Error("Wait for the experiment."); s = w.exchangeSecurity(s, role, payload); render(); },
   };
 }
-export function mountCalibration(game, notes, api, onComplete = null) {
-  let s = c.enterCalibration(game, notes);
+export function mountCalibration(initialSession, api, onComplete = null, onBusy = () => {}) {
+  let s = initialSession;
   let busy = false;
   let disposed = false;
   const area = byId("later-level");
@@ -161,6 +173,7 @@ export function mountCalibration(game, notes, api, onComplete = null) {
     <button id="cal-advance" type="button" class="small-button" hidden>Continue to Warden</button>`;
   function render() {
     if (disposed) return;
+    onBusy(busy || s.running);
     renderShared(s);
     area.setAttribute("aria-busy", String(busy || s.running));
     if (s.state_name) byId("cal-state").value = s.state_name;
@@ -177,13 +190,16 @@ export function mountCalibration(game, notes, api, onComplete = null) {
     byId("cal-result").hidden = !s.result;
     byId("cal-result-text").textContent = s.result
       ? `State |${s.state_name}>, operation ${s.operation}, correction ${s.correction}: ideal fidelity ${s.result.fidelity.toFixed(4)}. ${s.result.recovered ? "Recovery preserved this state. Test complementary states before inferring a general rule." : "Recovery changed the quantum state. Compare phase-sensitive and computational states."}` : "";
-    byId("cal-progress").textContent = `${s.evidence.length}/12 complementary state/branch observations verified. ${s.completed ? "Calibration complete; one fragment secured." : "Need all four bit branches with |0>, |+> and |+i>. Reset for more experiments while preserving discoveries."}`;
+    byId("cal-progress").textContent = `${s.evidence.length}/${c.REQUIRED_RECOVERIES} successful trials verified. ${s.completed ? "Calibration complete; one fragment secured." : "Recover four trials successfully. Repeated measurement outcomes count; try different states to explore phase and bit errors."}`;
     byId("cal-advance").hidden = !s.completed || !onComplete;
     byId("cal-advance").disabled = busy || s.running;
   }
   async function act(action) {
     if (busy) return;
-    try { await action(); }
+    try {
+      const pending = action();
+      if (typeof pending?.then === "function") await pending;
+    }
     catch (error) { byId("system-message").textContent = error.message; }
     finally { busy = false; render(); }
   }
@@ -223,10 +239,15 @@ export function mountCalibration(game, notes, api, onComplete = null) {
   }));
   byId("cal-advance").addEventListener("click", () => act(async () => {
     if (!s.completed || s.running) throw new Error("Complete calibration first.");
-    busy = true; await cancel(); onComplete(s); disposed = true;
+    await onComplete(s);
   }));
   render(); byId("cal-state").focus();
   return {
+    snapshot: () => s.phase !== "choice" ? s : { ...s,
+      state_name: byId("cal-state").value || null,
+      operation: byId("cal-operation").value || null },
+    isBusy: () => busy || s.running,
+    dispose: () => { disposed = true; },
     note: (text) => { s = { ...s, notes: addNote(s.notes, text) }; render(); },
     message: (role, payload) => { if (busy) throw new Error("Wait for the experiment."); s = c.sendCalibrationMessage(s, role, payload); render(); },
   };

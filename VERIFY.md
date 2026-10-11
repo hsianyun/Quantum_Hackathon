@@ -1,6 +1,47 @@
 # Split Vault verification record and gates
 
-## Stage 3 bridge repair — current state (2026-10-10)
+## Four-trial calibration and stage selector — current state (2026-10-11)
+
+User-approved rule: four successful committed trials complete calibration.
+Repeated states and outcomes count; no random branch collection or required
+state mix. Fidelity remains >=1-1e-9 and Alice's operation must be CX_H.
+Wrong recovery/operation adds no progress; valid experiments still cost one
+credit and the required two-bit transmission. Reset retains partial progress,
+and completion/practice/reset awards at most one fragment for the stage.
+Four observations verify the chosen states, not a universally derived map.
+
+The selector opens all three playable stages without prerequisite completion.
+Per-stage sessions preserve spending, choices, evidence, completion and Python
+handles, including a measured trial resumed before recovery. Notes and earned
+fragments are shared. Pending bridge calls disable and reject stage switches;
+retired renderers cannot change the active UI. Switching stages does not grant
+rewards or refresh budgets. First entry grants the documented lab allocation.
+
+Current regression, all exit 0 with zero failures/skips:
+
+| Command | Passed |
+| --- | ---: |
+| .venv/bin/python -m unittest discover -v | 61 |
+| npm test | 49 |
+| npm run test:integration | 4 |
+| npm run test:browser | 1 |
+
+The real-Qiskit calibration integration finishes in exactly four successful
+trials. Unit checks include repeated branches, wrong operations, partial reset,
+direct stage entry, saved budgets/links/choices, shared notes/rewards and pending
+locks. The optional Chromium suite drives actual HTML/CSS/JS with an explicitly
+test-only Python bridge fixture: direct entry, resumed measured trial, pending
+lock, four-trial reward, Warden exchange/judgment, Bell return/progression,
+notebook sharing, reset and 390px mobile layout. It runs without an application
+server; modules are injected into the browser, leaving browser policies intact.
+Hosted Qollab imports/bridge, manual keyboard/device checks and hardware remain
+pending; the browser fixture does not replace real-Qiskit integration.
+
+Diff/syntax and flat-layout checks passed: 51 upload files, no new dependencies.
+Updated application files: calibration.js, stage-select.js, main.js,
+later-level.js, index.html and main.css. Refresh them together in Qollab.
+
+## Stage 3 bridge repair — checkpoint (2026-10-10)
 
 The reported hosted Warden failure occurred at the strict Python-dictionary
 config check. Passing a plain JavaScript object through the bridge can produce
@@ -235,7 +276,10 @@ ideal simulation with no device/forwarding path; staged capability needs resolut
   clearly without replacement execution or spending.
 - Alice chooses/commits state and operation, sends only the allowed two bits;
   Bob infers/commits I/X/Z/XZ using blank notebook mapping. No auto-filled table.
-  Success needs complementary states/branch evidence, not a lucky eigenstate.
+  Current user-approved completion rule: four successful committed trials,
+  including repeated states/outcomes; wrong operation/recovery does not count.
+  Recommend complementary states to explore eigenstate ambiguity; completion
+  verifies tested states, not a universally derived correction map.
 - Test real Python-to-game correct/wrong paths, phase-sensitive errors,
   missing/falsified/duplicate messages, insufficient budgets, pending locks,
   stale/malformed replies, import/backend errors, no duplicate cost/reward,
@@ -322,16 +366,19 @@ Preserve runners. Record passed/failed/skipped/unrun separately; empty files
 and stub-return tests are not physics evidence. Replace Warden's unavailable
 assertion only when implemented, retaining period's while it is still empty.
 
-Count files before additions/review. Document preparation had 41 upload files; implementation now has 48, all
+Count files before additions/review. Document preparation had 41 upload files; implementation now has 51, all
 flat. The new files are calibration.js, security.js, later-level.js,
 test_calibration.mjs, test_security.mjs, test_later_integration.mjs and
-test_qft.py. AGENTS and dependency requirements remain unchanged.
+test_qft.py. The selector adds stage-select.js, test_stage_select.mjs and
+test_ui.mjs. AGENTS and dependency requirements remain unchanged.
 
 H01: hosted Qollab selected local simulator, imports/actual async bridge,
-conversion, repeated trials and errors. H02: real browser/mobile/keyboard,
+conversion, repeated trials and errors. H02: local automated Chromium flows
+and 390px layouts passed; manual browser/mobile/keyboard,
 focus, commitments, hidden answers, notebook/channel and level navigation.
 H03: Bell Lock required-exchange design review. H04: actual IonQ/device
-one-job-per-Run behavior. All are HUMAN_CHECK/unrun here; local simulation
+one-job-per-Run behavior. H01/H03/H04 remain HUMAN_CHECK/unrun; H02 remains
+HUMAN_CHECK with the scoped local browser evidence recorded above. Local simulation
 cannot complete them, and hardware submission requires separate authorization.
 
 ### Run ledger
@@ -341,6 +388,7 @@ cannot complete them, and hardware submission requires separate authorization.
 | Preparation before edits, 2026-10-10 | 39 passed | 31 passed | 1 passed | Existing baseline, zero failures/skips. |
 | Preparation after document edits, 2026-10-10 | 39 passed | 31 passed | 1 passed | Same three commands, all exit 0; zero failures/skips. |
 | Implementation Q14, 2026-10-10 | 59 passed | 45 passed | 4 passed | Current registered commands, all exit 0; zero failures/skips. |
+| Four-trial rule and selector, 2026-10-11 | 61 passed | 49 passed | 4 passed | Also 1 Chromium browser test passed; all exit 0, zero failures/skips. |
 
 Document-preparation post-edit execution used `source .venv/bin/activate && python -m unittest
 discover -v`, `npm test` and `npm run test:integration` from the repository

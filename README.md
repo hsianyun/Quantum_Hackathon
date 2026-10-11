@@ -187,7 +187,7 @@ Run the lightweight JavaScript tests with Node's built-in test runner (no
 dependencies or installation step required):
 
 ```sh
-node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs test_calibration.mjs test_security.mjs
+node --test test_game.mjs test_level_one.mjs test_quantum_client.mjs test_calibration.mjs test_security.mjs test_stage_select.mjs
 # Or, with npm available: npm test
 ```
 
@@ -293,13 +293,23 @@ The existing responsive previews are `level-1-desktop.png` and
 
 ## Teleportation Calibration and Warden
 
-After Bell Lock, use Continue to Teleportation Calibration. Choose an ideal
+Use the **Choose a stage** selector to open Bell Lock, Teleportation Calibration
+or Warden directly; completing earlier stages is optional. Continue buttons
+still follow the usual progression. Switching preserves each stage's choices,
+spending, discoveries and completion, with shared notes and earned fragments.
+Switching is disabled during pending experiments. Session progress is retained
+until reload; changing stages does not replenish an existing stage's budget.
+
+Choose an ideal
 local simulator in Qollab. Alice chooses a known |0>, |+> or |+i> state and an
 actual Bell-measurement operation, then commits and measures. Her two readout
 bits are transmitted for two classical bits. Bob chooses and commits I/X/Z/XZ
 before fidelity is revealed. The notebook starts without a correction table.
-A single state can hide an incorrect Pauli; completion requires successful
-recovery on all four branches with all three complementary states.
+A single state can hide an incorrect Pauli; try different states to compare
+phase and bit errors. Completion requires **four successful trials** with the
+correct Bell-measurement operation and fidelity at least 1-1e-9. Repeated states
+and measurement outcomes count, so there is no waiting for a random branch.
+Wrong recovery or an incorrect measurement circuit does not advance progress.
 
 One valid completed calibration experiment costs one source credit, including
 wrong recovery. Its selected simulator really runs the measurement circuit;
@@ -307,10 +317,11 @@ Python retains the same conditional state for Bob's later correction. Fidelity
 is an ideal-circuit diagnostic, not tomography. Hardware, noisy and unknown
 backends are rejected for calibration. Handles expire after 30 minutes;
 reset cancels the trial and preserves notebook discoveries and earned rewards.
-Each new lab has an explicit 12-credit/24-bit allocation. Random branch repeats
-may require checkpoint resets; verified calibration discoveries survive.
+Each new lab has an explicit 12-credit/24-bit allocation. The four successful
+trials cost four credits and eight transmitted bits. Checkpoint resets retain
+successful-trial progress and notes; additional practice awards no extra fragment.
 
-Warden follows calibration. Open a hidden link; Alice chooses an X/Z test
+Open Warden from the selector or after calibration. Open a hidden link; Alice chooses an X/Z test
 basis and sacrifices 1–4 sampling credits, while Bob independently commits his
 basis. Each credit purchases 1,024 fresh-pair shots, not repeated measurements
 of one physical pair. Both send their one-bit basis code (Z=0, X=1) before Bob
@@ -324,7 +335,12 @@ allows one job per Run). Actual hardware has not been tested.
 The security checkpoint restores the same hidden link's budget and preserves
 notes/rewards. Replace an expired link explicitly to start a new drill without
 reusing old sample evidence. A fragment is awarded at most once per level.
-Actual browser/Qollab behavior remains on the HUMAN_CHECK list.
+Hosted Qollab and manual device checks remain on the HUMAN_CHECK list.
+
+Optional local browser check: `npm run test:browser` uses installed Chromium
+(`SPLIT_VAULT_CHROMIUM` may select an executable). It loads the actual HTML/CSS/
+JS in a headless browser with a test-only Python bridge fixture, without a
+server. Real quantum execution is covered separately by integration tests.
 
 ## Small QFT utilities (no new gameplay)
 

@@ -8,6 +8,7 @@ const choices = () => ({ phase: "choice", state_name: null, operation: null,
   trial_id: null, alice_bits: null, received: null, correction: null,
   bobCommitted: false, running: false, result: null });
 const unit = (n) => Number.isFinite(n) && n >= 0 && n <= 1;
+export const REQUIRED_RECOVERIES = 4;
 export function createCalibration(game, notes = []) {
   validateState(game);
   if (game.currentLevel !== 2) throw new Error("Calibration requires level 2.");
@@ -85,10 +86,12 @@ export function receiveRecovery(s, result, trial) {
       || !unit(probabilities["0"]) || !unit(probabilities["1"])
       || Math.abs(probabilities["0"] + probabilities["1"] - 1) > 1e-9) throw new Error("Invalid recovery; retry the same committed trial.");
   const evidence = [...s.evidence];
-  const key = `${s.received}:${s.state_name}`;
   const recovered = result.fidelity >= 1 - 1e-9;
-  if (recovered && s.operation === "CX_H" && !evidence.includes(key)) evidence.push(key);
-  const completed = evidence.length === 12;
+  // Each committed trial counts once; repeated random branches are valid.
+  if (recovered && s.operation === "CX_H" && evidence.length < REQUIRED_RECOVERIES) {
+    evidence.push(`${s.trial}:${s.received}:${s.state_name}`);
+  }
+  const completed = evidence.length >= REQUIRED_RECOVERIES;
   let game = spendBellPairs(s.game, 1);
   if (completed && !s.completed) game = awardFragments(game);
   return { ...s, phase: "result", running: false, game, evidence, completed: s.completed || completed,

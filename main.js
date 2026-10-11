@@ -1,9 +1,10 @@
-import { createSession, chooseGate, commitAlice, chooseBasis, choosePrediction, commitBob,
+import { chooseGate, commitAlice, chooseBasis, choosePrediction, commitBob,
   beginExperiment, experimentRequest, finishExperiment, failExperiment, readyToRun,
   nextTrial, restartLevel, sendMessage, TRIAL_PAIRS } from "./level-one.js";
 import { bell_experiment, teleport_prepare, teleport_finish, teleport_cancel, warden_open, warden_experiment, warden_close } from "api";
 import { createBellExperiment, createCalibrationExperiments, createSecurityExperiments } from "./quantum-client.js";
 import { mountCalibration, mountSecurity } from "./later-level.js";
+import { createStageStore, selectStage } from "./stage-select.js";
 import { addNote } from "./notebook.js";
 import { renderAlice } from "./alice.js";
 import { renderBob } from "./bob.js";
@@ -12,7 +13,8 @@ import { renderMessages, renderNotes } from "./radio.js";
 
 // Qollab statically discovers the Python import and injects the selected backend.
 const bellExperiment = createBellExperiment(bell_experiment, backend);
-let session = createSession();
+let navigation = createStageStore();
+let session = navigation.sessions[1];
 let later = null;
 const byId = (id) => document.getElementById(id);
 const announce = (message) => { byId("system-message").textContent = message; };
@@ -48,6 +50,7 @@ function renderVerification() {
 }
 function render() {
   const { game, result, running } = session;
+  byId("level-select").disabled = running;
   byId("bell-pairs").textContent = game.bellPairs;
   byId("classical-bits").textContent = game.classicalBits;
   byId("suspicion").textContent = `${game.wardenSuspicion}%`;
@@ -130,21 +133,43 @@ byId("run-experiment").addEventListener("click", async () => {
   }
 });
 byId("reset-level").addEventListener("click", () => update(restartLevel, "Resources restored. Notebook discoveries and earned fragments retained."));
+function switchLevel(target) {
+  try {
+    if (later?.isBusy() || session.running) throw new Error("Wait for the pending experiment before switching stages.");
+    if (target === navigation.current) return;
+    const next = selectStage(navigation, later ? later.snapshot() : session, target);
+    later?.dispose(); later = null;
+    navigation = next;
+    // Logs are stage-specific and can have the same length with different text.
+    delete byId("messages").dataset.count;
+    delete byId("notes").dataset.count;
+    byId("level-select").value = String(target);
+    byId("bell-level").hidden = target !== 1;
+    byId("later-level").hidden = target === 1;
+    for (const id of ["reset-level", "run-experiment", "run-hint"]) byId(id).hidden = target !== 1;
+    const onBusy = (busy) => { byId("level-select").disabled = busy; };
+    if (target === 1) {
+      session = navigation.sessions[1]; render();
+    } else if (target === 2) {
+      later = mountCalibration(navigation.sessions[2],
+        createCalibrationExperiments(teleport_prepare, teleport_finish, teleport_cancel, backend),
+        () => switchLevel(3), onBusy);
+    } else {
+      later = mountSecurity(navigation.sessions[3],
+        createSecurityExperiments(warden_open, warden_experiment, warden_close, backend), onBusy);
+    }
+    const name = ["Bell Lock", "Teleportation Calibration", "Warden"][target - 1];
+    document.title = `Split Vault | ${name}`;
+    document.querySelector(".skip-link").href = ["#rooms", "#cal-state", "#sec-open"][target - 1];
+    announce(`Stage ${target}: ${name}. Progress and notes saved; resume or reset this stage to explore.`);
+  } catch (error) {
+    byId("level-select").value = String(navigation.current);
+    announce(error.message);
+  }
+}
+byId("level-select").addEventListener("change", () => switchLevel(Number(byId("level-select").value)));
 byId("next-level").addEventListener("click", () => {
-  if (!session.completed || session.running || later) return;
-  byId("bell-level").hidden = true;
-  // Keep notebook/channel controls available while replacing Bell run controls.
-  byId("reset-level").hidden = true;
-  byId("run-experiment").hidden = true;
-  byId("run-hint").hidden = true;
-  byId("later-level").hidden = false;
-  later = mountCalibration(session.game, session.notes,
-    createCalibrationExperiments(teleport_prepare, teleport_finish, teleport_cancel, backend), (calibration) => {
-      later = mountSecurity(calibration.game, calibration.notes,
-        createSecurityExperiments(warden_open, warden_experiment, warden_close, backend));
-      announce("Security lab allocated: 12 sampling credits and 24 classical bits. Test complementary bases before trusting a link.");
-    });
-  announce("Calibration lab allocated: 12 source credits and 24 classical bits. Discover recovery together.");
+  if (session.completed) switchLevel(2);
 });
 byId("why-toggle").addEventListener("click", () => {
   if (!session.completed) return;
